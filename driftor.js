@@ -1,265 +1,201 @@
 #!/usr/bin/env node
 /**
- * Driftor - Autonomous Visual Stacking & Viewport Occlusion Gate
+ * Driftor - real-browser gate for AI-written UI changes
  * ---------------------------------------------------------------------------
- * Closes the open loop between an agent CSS/layout regression and a verified
- * green browser run using Kane CLI 0.10.x NDJSON feedback:
- *
- *   node driftor.js --inject   # 1. Injects visual stacking regression (modal overlay traps pointer-events)
- *   node driftor.js gate       # 2. Kane drives Chrome, detects click interception via hit-testing
- *   node driftor.js --heal     # 3. Reads NDJSON trace, repairs stacking context, re-verifies green
- *   node driftor.js --watch    # 4. Continuous visual gate on file save
- *
- * The regression is a real-world CSS stacking bug in lib/visual-drift.ts:
- *   BANNER_OCCLUSION = true (floating backdrop covers primary CTA)
- * JSDOM unit tests pass 100% because JSDOM lacks computed layout box hit-testing!
- * Only Kane CLI running in real Chrome catches the interception!
+ *   node driftor.js                 # run the Kane gate; exits 1 if any objective fails
+ *   node driftor.js --heal          # send the failing Kane evidence to a coding agent, then re-verify
+ *   node driftor.js --watch         # re-run the gate when watched source changes
+ *   node driftor.js --inject [bug]  # ship a bug-zoo regression into the demo app (default: overlay)
+ *   node driftor.js --list          # list the bug-zoo regressions
+ *   node driftor.js --reset         # revert every injected regression (demo housekeeping, not a heal)
  */
 
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-
-const DRIFT_FILE = path.join(__dirname, "lib", "visual-drift.ts");
-const TRACE_DIR = path.join(__dirname, "kane-traces");
-
-const line = (c = "=") => console.log(c.repeat(78));
-
-/* ── Source Surgery on the Regression Anchor Point ────────────────────────── */
-
-function readDriftFile() {
-  if (!fs.existsSync(DRIFT_FILE)) {
-    console.error("❌ lib/visual-drift.ts not found.");
+const { parseNdjson, extractFindings, buildHealPrompt } = require("./lib/heal");
+// The bug zoo only exists in the Driftor repo; other projects don't need it.
+const zooModule = () => {
+  try {
+    return require("./lib/regressions");
+  } catch {
+    console.error(" ✗ The bug zoo (lib/regressions.js) isn't in this project.");
     process.exit(1);
   }
-  return fs.readFileSync(DRIFT_FILE, "utf8");
-}
+};
 
-function isOcclusionActive() {
-  const content = readDriftFile();
-  return /export\s+const\s+BANNER_OCCLUSION\s*=\s*true/.test(content);
-}
+const ROOT = __dirname;
+const TRACE_DIR = path.join(ROOT, "kane-traces");
+const CONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, "driftor.config.json"), "utf8"));
 
-function setOcclusion(val) {
-  const src = readDriftFile();
-  const updated = src.replace(
-    /export\s+const\s+BANNER_OCCLUSION\s*=\s*(true|false);/,
-    `export const BANNER_OCCLUSION = ${val};`
-  );
-  fs.writeFileSync(DRIFT_FILE, updated);
-}
+const line = (c = "=") => console.log(c.repeat(78));
+const passthrough = () => process.argv.slice(2).filter((a) => a === "--headless");
 
-/* ── Kane CLI Runner Invocation ───────────────────────────────────────────── */
-
-function runKane(extraArgs = []) {
-  const runner = path.join(__dirname, "driftor_test.js");
-  const args = [runner, ...process.argv.slice(2).filter((a) => a === "--headless" || a === "--mock"), ...extraArgs];
-  const res = spawnSync(process.execPath, args, {
-    cwd: __dirname,
-    stdio: "inherit",
+function runGate({ capture = false, env = {} } = {}) {
+  const res = spawnSync(process.execPath, [path.join(ROOT, "driftor_test.js"), ...passthrough()], {
+    cwd: ROOT,
+    stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
+    encoding: "utf8",
+    env: { ...process.env, ...env },
   });
+  return { passed: res.status === 0, output: capture ? `${res.stdout || ""}${res.stderr || ""}` : "" };
+}
+
+function runUnitTests() {
+  const res = spawnSync("npx", ["vitest", "run", "--reporter=dot"], { cwd: ROOT, stdio: "inherit" });
   return res.status === 0;
 }
 
-/* ── NDJSON Trace Forensics ───────────────────────────────────────────────── */
-
-function readFailureTraces() {
+function readFindings() {
   if (!fs.existsSync(TRACE_DIR)) return [];
   const findings = [];
-
-  for (const file of fs.readdirSync(TRACE_DIR)) {
-    if (!file.endsWith(".ndjson")) continue;
-    const content = fs.readFileSync(path.join(TRACE_DIR, file), "utf8");
-
-    for (const rawLine of content.split("\n")) {
-      if (!rawLine.trim()) continue;
-      let evt;
-      try {
-        evt = JSON.parse(rawLine);
-      } catch {
-        continue;
-      }
-
-      if (evt.status !== "failed" && evt.type !== "error") continue;
-
-      const v = evt.verdict || {};
-      const parts = [];
-      if (evt.remark) parts.push(evt.remark);
-      if (v.bug_title) parts.push(`bug: ${v.bug_title}`);
-      if (v.root_cause) parts.push(`root cause: ${v.root_cause}`);
-      if (v.suggestion) parts.push(`suggestion: ${v.suggestion}`);
-      if (evt.reason_code) parts.push(`code: ${evt.reason_code}`);
-
-      findings.push({
-        trace: file,
-        message: parts.length ? parts.join("\n     ") : evt.message || "Visual occlusion failure",
-      });
-    }
+  for (const file of fs.readdirSync(TRACE_DIR).sort()) {
+    if (!file.endsWith(".ndjson") || file === "latest.ndjson") continue;
+    const events = parseNdjson(fs.readFileSync(path.join(TRACE_DIR, file), "utf8"));
+    findings.push(...extractFindings(file, events));
   }
-
   return findings;
 }
 
-/* ── Commands ─────────────────────────────────────────────────────────────── */
+/* ── bug zoo ──────────────────────────────────────────────────────────────── */
 
-function cmdInject() {
+function cmdList() {
+  const zoo = zooModule();
   line();
-  console.log(" 💉 DRIFTOR - INJECTING VISUAL STACKING REGRESSION");
+  console.log(" 🐛 DRIFTOR BUG ZOO — one-line regressions JSDOM can't see");
   line();
-
-  if (isOcclusionActive()) {
-    console.log(" ⚠️  Visual regression is already present (BANNER_OCCLUSION = true).");
-    console.log("    Run `npm run driftor:test` to see Kane catch it live in Chrome.");
-    return;
+  const live = zoo.active();
+  for (const [name, r] of Object.entries(zoo.REGRESSIONS)) {
+    console.log(` ${live.includes(name) ? "●" : "○"} ${name.padEnd(15)} ${r.title}`);
+    console.log(`   ${"".padEnd(15)} ${r.story}`);
   }
-
-  setOcclusion(true);
-  console.log(" ✓ Patched lib/visual-drift.ts: BANNER_OCCLUSION = true");
-  console.log("   Effect: A floating modal backdrop with z-index: 50 & pointer-events: auto");
-  console.log("   now renders across the viewport, intercepting clicks over the primary CTA.");
-  console.log("   The TypeScript compiler is 100% happy.");
-  console.log("   Jest/Vitest/JSDOM tests PASS (because JSDOM lacks layout hit-testing).");
-  console.log("   BUT in real Chrome, the button cannot receive clicks!");
-  console.log("\n 👉 Next step: Run `npm run driftor:test` — Kane CLI will catch the intercepted click in Chrome.");
+  console.log("\n Inject one with `npm run driftor:inject -- <name>`.");
 }
 
-function buildHealPrompt(findings) {
-  const evidence = findings.length
-    ? findings.map((f) => `- [${f.trace}] ${f.message}`).join("\n")
-    : "- Click dispatch intercepted by overlay backdrop at coordinates (840, 195).";
+function cmdInject(name = "overlay") {
+  const zoo = zooModule();
+  line();
+  console.log(" 💉 DRIFTOR — SHIPPING A UI REGRESSION INTO THE DEMO APP");
+  line();
+  const r = zoo.REGRESSIONS[name];
+  if (!r) {
+    console.error(` ✗ Unknown regression "${name}". Available: ${Object.keys(zoo.REGRESSIONS).join(", ")}`);
+    process.exit(1);
+  }
+  const reverted = zoo.resetAll();
+  if (reverted.length) console.log(` ↺ Reverted earlier injection: ${reverted.join(", ")}`);
 
-  return [
-    "Kane CLI drove a real Chrome browser against CloudScale and caught a Visual Stacking Bug.",
-    "",
-    "NDJSON Failure Evidence from kane-traces/:",
-    evidence,
-    "",
-    "A floating overlay is intercepting clicks meant for the primary CTA [deploy-key-btn].",
-    "Audit lib/visual-drift.ts. Restore BANNER_OCCLUSION to false so the stacking context clears.",
-  ].join("\n");
+  const result = zoo.inject(name);
+  if (result === "missing") {
+    console.error(` ✗ Couldn't find the healthy code for "${name}" in ${r.file}. Was the file edited?`);
+    process.exit(1);
+  }
+  console.log(` ✓ ${name}: ${r.title}`);
+  console.log(`   ${r.file}`);
+  console.log(`   - ${r.healthy}`);
+  console.log(`   + ${r.regressed}`);
+  console.log(`   ${r.story}\n`);
+
+  console.log(" 🧪 Unit tests (Vitest + JSDOM) on the regressed code:");
+  const ok = runUnitTests();
+  console.log(ok ? "\n   JSDOM: all green. It has no layout engine, so it can't see this." : "\n   (unit tests failed — check the output above)");
+  console.log("\n 👉 Next: `npm run driftor:gate` — Kane runs the same flows in real Chrome.");
 }
 
-function healWithAgent(findings) {
-  if (process.argv.includes("--deterministic")) {
-    console.log(" ⚡ Running in --deterministic mode (instant autonomous AST patch)...");
-    return false;
-  }
+function cmdReset() {
+  const reverted = zooModule().resetAll();
+  console.log(reverted.length ? ` ✓ Reverted: ${reverted.join(", ")}` : " ✓ No injected regression found; nothing to reset.");
+}
 
-  const prompt = buildHealPrompt(findings);
-  console.log("\n 🤖 Dispatching NDJSON failure trace to AI Coding Agent...\n");
-  console.log(prompt.split("\n").map((l) => `   │ ${l}`).join("\n"));
-  console.log("");
+/* ── heal (one-shot agent call) ───────────────────────────────────────────── */
 
-  const agentCLIs = [
+function healWithAgent(prompt) {
+  const agents = [
     { name: "claude", args: ["-p", prompt, "--permission-mode", "acceptEdits"] },
-    { name: "gemini", args: ["--prompt", prompt] },
+    { name: "gemini", args: ["--prompt", prompt, "--yolo"] },
   ];
-
-  for (const cli of agentCLIs) {
-    const which = spawnSync("which", [cli.name], { encoding: "utf8" });
-    if (which.status === 0 && which.stdout.trim()) {
-      console.log(` 🚀 Invoking agent CLI: ${cli.name}...`);
-      try {
-        const res = spawnSync(cli.name, cli.args, {
-          cwd: __dirname,
-          stdio: ["ignore", "inherit", "inherit"],
-          timeout: 20000,
-        });
-        if (res.status === 0) return true;
-      } catch {
-        // Fall back to deterministic patch
-      }
-    }
+  for (const agent of agents) {
+    const which = spawnSync("which", [agent.name], { encoding: "utf8" });
+    if (which.status !== 0 || !which.stdout.trim()) continue;
+    console.log(` 🚀 Handing the evidence to ${agent.name}…\n`);
+    const res = spawnSync(agent.name, agent.args, {
+      cwd: ROOT,
+      stdio: ["ignore", "inherit", "inherit"],
+      timeout: 10 * 60 * 1000,
+    });
+    if (res.status === 0) return agent.name;
+    console.log(`\n ⚠️  ${agent.name} exited with ${res.status ?? res.signal}.`);
   }
-
-  return false;
+  return null;
 }
 
 function cmdHeal() {
   line();
-  console.log(" 🔁 DRIFTOR - CLOSED-LOOP AUTONOMOUS SELF-HEAL");
+  console.log(" 🔁 DRIFTOR — HEAL FROM KANE EVIDENCE");
   line();
 
-  const findings = readFailureTraces();
-  if (findings.length) {
-    console.log(" 📄 NDJSON visual failure evidence extracted from kane-traces/:");
-    for (const f of findings.slice(0, 4)) {
-      console.log(`   [${f.trace}]\n     ${f.message}`);
-    }
-  } else {
-    console.log(" 📄 Auditing lib/visual-drift.ts directly.");
-  }
-
-  if (!isOcclusionActive()) {
-    console.log("\n ✅ lib/visual-drift.ts is already HEALTHY (BANNER_OCCLUSION = false).");
-    console.log("    All primary CTAs are unobstructed.");
+  const findings = readFindings();
+  if (!findings.length) {
+    console.log(" ✓ No failing steps in kane-traces/. Run `npm run driftor:gate` first.");
     return;
   }
 
-  // Attempt agent heal, or fallback to deterministic patch
-  const agentSuccess = healWithAgent(findings);
-  if (!agentSuccess) {
-    console.log("\n 🛠️  Executing Autonomous Remediation Patch on lib/visual-drift.ts...");
-    setOcclusion(false);
-    console.log("    Patched: BANNER_OCCLUSION true → false (Stacking Context Restored)");
+  const prompt = buildHealPrompt(findings, { app: CONFIG.app });
+  console.log(" 📄 Prompt for the agent, built from the failing NDJSON events:\n");
+  console.log(prompt.split("\n").map((l) => `   │ ${l}`).join("\n"));
+  console.log("");
+
+  const agent = healWithAgent(prompt);
+  if (!agent) {
+    console.error(" ❌ No coding agent completed the fix. Install Claude Code (`claude`) or Gemini CLI (`gemini`).");
+    process.exit(1);
   }
 
-  console.log("\n 🧪 Triggering Kane CLI Re-Verification to confirm fix...");
-  const green = runKane();
-
+  console.log("\n 🧪 Re-running the Kane gate to verify the agent's fix in real Chrome…");
+  const { passed } = runGate({ env: { DRIFTOR_TRIGGER: "heal-verify" } });
   line();
-  if (green) {
-    console.log(" 🎉 CLOSED-LOOP SUCCESS: VISUAL STACKING REGRESSION AUTONOMOUSLY HEALED!");
-    console.log("    Zero human intervention required.");
-    console.log("    Kane verified live DOM clicks in real Chrome back to 100% GREEN.");
+  if (passed) {
+    console.log(` 🎉 HEALED: ${agent} fixed it and Kane verified every objective in Chrome.`);
   } else {
-    console.log(" ❌ Verification failed after patch. Check kane-traces/ for details.");
+    console.log(` ❌ Still failing after ${agent}'s patch. New evidence is in kane-traces/.`);
     process.exit(1);
   }
 }
 
+/* ── watch ────────────────────────────────────────────────────────────────── */
+
 function cmdWatch() {
+  const dirs = CONFIG.watch || ["app"];
   line();
-  console.log(" 👁️  DRIFTOR - CONTINUOUS VISUAL ASSURANCE WATCHER");
-  console.log(" Monitoring lib/ and app/ for visual layout and component changes...");
+  console.log(` 👁️  DRIFTOR — WATCHING ${dirs.join(", ")}`);
   line();
-
-  let timeout = null;
+  let timer = null;
   const trigger = (file) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      console.log(`\n ⚡ Change detected in ${file} — Running Kane Visual Gate...`);
-      runKane();
-    }, 500);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      console.log(`\n ⚡ ${file} changed — running the Kane gate…`);
+      runGate({ env: { DRIFTOR_TRIGGER: "watch" } });
+    }, 800);
   };
-
-  const watchDirs = [path.join(__dirname, "lib"), path.join(__dirname, "app")];
-  for (const d of watchDirs) {
-    if (fs.existsSync(d)) {
-      fs.watch(d, { recursive: true }, (evt, filename) => {
-        if (filename && !filename.includes(".next") && !filename.includes("kane-traces")) {
-          trigger(filename);
-        }
-      });
+  for (const dir of dirs) {
+    if (fs.existsSync(path.join(ROOT, dir))) {
+      fs.watch(path.join(ROOT, dir), { recursive: true }, (_evt, file) => file && trigger(file));
     }
   }
-
-  console.log(" ✓ Watcher active. Press Ctrl+C to stop.");
+  console.log(" ✓ Watching. Ctrl+C to stop.");
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  if (args.includes("--inject")) {
-    cmdInject();
-  } else if (args.includes("--heal")) {
-    cmdHeal();
-  } else if (args.includes("--watch")) {
-    cmdWatch();
-  } else {
-    // Default action: run visual verification gate
-    const ok = runKane();
-    process.exit(ok ? 0 : 1);
-  }
-}
+/* ── dispatch ─────────────────────────────────────────────────────────────── */
 
-main();
+const args = process.argv.slice(2);
+const after = (f) => {
+  const v = args[args.indexOf(f) + 1];
+  return v && !v.startsWith("--") ? v : undefined;
+};
+
+if (args.includes("--inject")) cmdInject(after("--inject"));
+else if (args.includes("--list")) cmdList();
+else if (args.includes("--heal")) cmdHeal();
+else if (args.includes("--reset")) cmdReset();
+else if (args.includes("--watch")) cmdWatch();
+else process.exit(runGate().passed ? 0 : 1);
