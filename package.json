@@ -19,7 +19,7 @@
     "driftor:heal": "node driftor.js --heal",
     "driftor:reset": "node driftor.js --reset",
     "driftor:watch": "node driftor.js --watch",
-    "driftor:preflight": "sh /Users/mrnetwork/.gemini/skills/kane-cli/scripts/preflight.sh",
+    "driftor:preflight": "node scripts/preflight.js",
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"
   },
