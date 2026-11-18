@@ -21,13 +21,13 @@
       "id": "desktop-occlusion-gate",
       "viewport": "1920x1080",
       "title": "Desktop: primary CTA receives the click (UC-01, UC-02)",
-      "objective": "Open {{url}}/app. Verify the heading contains \"CloudScale AI Inference Gateway\" and Active keys reads \"2 Keys\". Click the button \"Generate Production API Key\". Verify Action status displays \"KEY_GENERATED_HEALTHY\" and Active keys reads \"3 Keys\"."
+      "objective": "Open {{url}}/app. Verify the heading contains \"CloudScale AI Inference Gateway\" and Active keys reads \"2 Keys\". Click the button \"Generate Production API Key\" with a mouse click, as a user would. Do not use the keyboard, and do not wait for or work around anything that covers the button; if the click does not reach it, the check fails. Verify Action status displays \"KEY_GENERATED_HEALTHY\" and Active keys reads \"3 Keys\"."
     },
     {
       "id": "mobile-viewport-gate",
       "viewport": "375x812",
       "title": "Mobile: quota top-up stays reachable (UC-03)",
-      "objective": "Open {{url}}/app. Verify Available quota reads \"$4,500.00\". Click \"+ Top Up Quota ($250)\". Verify Available quota reads \"$4,750.00\" and Action status displays \"QUOTA_TOPUP_SUCCESS\"."
+      "objective": "Open {{url}}/app. Verify Available quota reads \"$4,500.00\". Click \"+ Top Up Quota ($250)\" with a mouse click, as a user would. Do not use the keyboard, and do not wait for or work around anything that covers it; if the click does not reach it, the check fails. Verify Available quota reads \"$4,750.00\" and Action status displays \"QUOTA_TOPUP_SUCCESS\"."
     }
   ]
 }
