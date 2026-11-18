@@ -183,7 +183,8 @@ function runObjective(test, appUrl) {
     };
 
     child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
+      // Traces are committed as evidence; keep the local home directory out of them.
+      const text = chunk.toString().split(require("os").homedir()).join("~");
       trace.write(text);
       latest.write(text);
       buffer += text;
