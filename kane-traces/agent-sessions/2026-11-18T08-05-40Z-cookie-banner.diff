@@ -1,0 +1,139 @@
+diff -ru /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/(site)/page.tsx app/(site)/page.tsx
+--- /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/(site)/page.tsx	2026-11-18 09:05:40
++++ app/(site)/page.tsx	2026-11-18 09:06:23
+@@ -3,6 +3,7 @@
+ import LiveRunStat from "@/components/LiveRunStat";
+ import { ChromeVerdict, EvidencePanels } from "@/components/LiveEvidence";
+ import { BugZoo, RunLog } from "@/components/BugZoo";
++import { AgentSession } from "@/components/AgentSession";
+ 
+ /* ───────────────────────── content ───────────────────────── */
+ 
+@@ -275,6 +276,8 @@
+             </li>
+           ))}
+         </ol>
++        <h3 className="mt-12 font-mono text-xs text-graphite">a real session, replayed from its transcript</h3>
++        <AgentSession />
+       </Section>
+ 
+       {/* 05 */}
+diff -ru /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/api/traces/route.ts app/api/traces/route.ts
+--- /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/api/traces/route.ts	2026-11-18 09:05:40
++++ app/api/traces/route.ts	2026-11-18 09:06:23
+@@ -45,6 +45,21 @@
+   objectives: Record<string, { verdict: string; viewport?: string; title?: string }>;
+ }
+ 
++export interface SessionStep {
++  kind: "prompt" | "claude" | "edit" | "hook-block" | "hook-pass" | "hook-note" | "result";
++  text: string;
++}
++
++export interface AgentSession {
++  id: string;
++  label: string;
++  startedAt: string;
++  /** Bug-zoo regression already on the branch when the session started, if any. */
++  injected: string | null;
++  steps: SessionStep[];
++  diff: string;
++}
++
+ export interface ZooEntry {
+   name: string;
+   title: string;
+@@ -66,6 +81,8 @@
+   runs: RunSummary[];
+   /** The bug-zoo regressions driftor.js can inject. */
+   zoo: ZooEntry[];
++  /** Real Claude Code sessions run with the Driftor Stop hook armed, newest first. */
++  sessions: AgentSession[];
+ }
+ 
+ function parseForDisplay(text: string): TraceEvent[] {
+@@ -145,6 +162,55 @@
+   return out;
+ }
+ 
++/** Turns a `claude -p --output-format stream-json` transcript into a readable timeline. */
++function listSessions(): AgentSession[] {
++  const dir = path.join(TRACE_DIR, "agent-sessions");
++  if (!fs.existsSync(dir)) return [];
++  const out: AgentSession[] = [];
++  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort().reverse()) {
++    const id = file.replace(/\.jsonl$/, "");
++    const metaPath = path.join(dir, `${id}.meta.json`);
++    if (!fs.existsSync(metaPath)) continue; // still running
++    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
++    const steps: SessionStep[] = [{ kind: "prompt", text: meta.prompt }];
++    for (const raw of fs.readFileSync(path.join(dir, file), "utf8").split("\n")) {
++      let e: any;
++      try {
++        e = JSON.parse(raw);
++      } catch {
++        continue;
++      }
++      if (e.type === "assistant") {
++        for (const c of e.message?.content ?? []) {
++          if (c.type === "text" && c.text.trim()) steps.push({ kind: "claude", text: c.text.trim() });
++          if (c.type === "tool_use" && (c.name === "Edit" || c.name === "Write"))
++            steps.push({ kind: "edit", text: String(c.input?.file_path ?? "").replace(process.cwd() + "/", "") });
++        }
++      } else if (e.type === "user") {
++        const content = Array.isArray(e.message?.content) ? e.message.content : [{ type: "text", text: e.message?.content }];
++        for (const c of content) {
++          if (c.type === "text" && typeof c.text === "string" && c.text.startsWith("Stop hook feedback:"))
++            steps.push({ kind: "hook-block", text: c.text.replace(/^Stop hook feedback:\s*/, "") });
++        }
++      } else if (e.type === "system" && e.subtype === "informational" && typeof e.content === "string") {
++        steps.push({ kind: /verified/.test(e.content) ? "hook-pass" : "hook-note", text: e.content.replace(/^Stop says:\s*/, "") });
++      } else if (e.type === "result") {
++        steps.push({ kind: "result", text: `${e.subtype} · ${e.num_turns} turns · ${Math.round((e.duration_ms ?? 0) / 1000)}s` });
++      }
++    }
++    const diffPath = path.join(dir, `${id}.diff`);
++    out.push({
++      id,
++      label: meta.label,
++      startedAt: meta.startedAt,
++      injected: meta.injected && meta.injected !== "none" ? meta.injected : null,
++      steps,
++      diff: fs.existsSync(diffPath) ? fs.readFileSync(diffPath, "utf8").replace(/^(---|\+\+\+) .*\/(app|components|lib)\//gm, "$1 $2/") : "",
++    });
++  }
++  return out;
++}
++
+ export async function GET() {
+   const { files, findings } = readDir(TRACE_DIR);
+   const body: TracesResponse = {
+@@ -153,6 +219,7 @@
+     healPrompt: findings.length ? buildHealPrompt(findings) : null,
+     lastFailingRun: lastFailingRun(),
+     runs: listRuns(),
++    sessions: listSessions(),
+     zoo: Object.entries(REGRESSIONS as Record<string, Omit<ZooEntry, "name">>).map(([name, r]) => ({ name, ...r })),
+   };
+   return NextResponse.json(body);
+diff -ru /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/app/CloudScaleDashboard.tsx app/app/CloudScaleDashboard.tsx
+--- /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.rsXOapnIOi/app/app/CloudScaleDashboard.tsx	2026-11-18 09:05:40
++++ app/app/CloudScaleDashboard.tsx	2026-11-18 09:07:46
+@@ -4,6 +4,7 @@
+ import Link from "next/link";
+ import confetti from "canvas-confetti";
+ import { formatUsd, TOPUP_CENTS, type ActivityEntry, type CloudScaleState } from "@/lib/cloudscale";
++import CookieConsent from "./CookieConsent";
+ import MaintenanceNotice from "./MaintenanceNotice";
+ 
+ /*
+@@ -128,6 +129,7 @@
+   return (
+     <div className="min-h-screen bg-cs-bg text-cs-text text-sm">
+       <MaintenanceNotice />
++      <CookieConsent />
+ 
+       {/* Demo banner: makes it obvious this is the app under test, not Driftor itself. */}
+       <div className="bg-cs-text text-zinc-300 text-xs">
+Only in app/app: CookieConsent.tsx
+Only in components: AgentSession.tsx

@@ -1,0 +1,1 @@
+{"label":"cookie-banner","startedAt":"2026-11-18T08-05-40Z","prompt":"Add a cookie consent banner to the CloudScale dashboard (app/app/). It should appear for first-time visitors with 'Accept' and 'Decline' buttons, remember the choice in localStorage, and fit the existing CloudScale styling. Keep it in a new component.","injected":"none"}

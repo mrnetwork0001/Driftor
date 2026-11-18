@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-11-18T08:08:24.322Z",
+  "finishedAt": "2026-11-18T08:10:42.583Z",
+  "passed": true,
+  "trigger": "claude-stop-hook",
+  "regression": [],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  4 passed (4)"
+  },
+  "objectives": {
+    "desktop-occlusion-gate": {
+      "verdict": "passed",
+      "viewport": "1920x1080",
+      "title": "Desktop: primary CTA receives the click (UC-01, UC-02)"
+    },
+    "narrow-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "800x1000",
+      "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)"
+    }
+  }
+}
