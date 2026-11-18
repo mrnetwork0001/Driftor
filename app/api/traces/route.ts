@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { parseNdjson, extractFindings, buildHealPrompt, isFailure } from "@/lib/heal";
+import { REGRESSIONS } from "@/lib/regressions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,16 @@ export interface RunSummary {
   objectives: Record<string, { verdict: string; viewport?: string; title?: string }>;
 }
 
+export interface ZooEntry {
+  name: string;
+  title: string;
+  story: string;
+  file: string;
+  healthy: string;
+  regressed: string;
+  expect: Record<string, string>;
+}
+
 export interface TracesResponse {
   files: TraceFile[];
   findings: Finding[];
@@ -53,6 +64,8 @@ export interface TracesResponse {
   lastFailingRun: FailingRun | null;
   /** Every archived gate run, newest first. */
   runs: RunSummary[];
+  /** The bug-zoo regressions driftor.js can inject. */
+  zoo: ZooEntry[];
 }
 
 function parseForDisplay(text: string): TraceEvent[] {
@@ -140,6 +153,7 @@ export async function GET() {
     healPrompt: findings.length ? buildHealPrompt(findings) : null,
     lastFailingRun: lastFailingRun(),
     runs: listRuns(),
+    zoo: Object.entries(REGRESSIONS as Record<string, Omit<ZooEntry, "name">>).map(([name, r]) => ({ name, ...r })),
   };
   return NextResponse.json(body);
 }
