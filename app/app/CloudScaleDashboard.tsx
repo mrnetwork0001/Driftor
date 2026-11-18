@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { formatUsd, TOPUP_CENTS, type ActivityEntry, type CloudScaleState } from "@/lib/cloudscale";
+import CookieConsent from "./CookieConsent";
 import MaintenanceNotice from "./MaintenanceNotice";
 
 /*
@@ -128,6 +129,7 @@ export default function CloudScaleDashboard() {
   return (
     <div className="min-h-screen bg-cs-bg text-cs-text text-sm">
       <MaintenanceNotice />
+      <CookieConsent />
 
       {/* Demo banner: makes it obvious this is the app under test, not Driftor itself. */}
       <div className="bg-cs-text text-zinc-300 text-xs">
