@@ -3,14 +3,20 @@
  * Driftor - real-browser gate for AI-written UI changes
  * ---------------------------------------------------------------------------
  *   node driftor.js                 # run the Kane gate; exits 1 if any objective fails
+ *   node driftor.js --hook          # Claude Code Stop hook: gate the agent's edits, feed failures back
  *   node driftor.js --heal          # send the failing Kane evidence to a coding agent, then re-verify
  *   node driftor.js --watch         # re-run the gate when watched source changes
  *   node driftor.js --inject [bug]  # ship a bug-zoo regression into the demo app (default: overlay)
  *   node driftor.js --list          # list the bug-zoo regressions
  *   node driftor.js --reset         # revert every injected regression (demo housekeeping, not a heal)
+ *
+ * The hook is opt-in: it only acts when DRIFTOR_HOOK=1 is set for the Claude
+ * Code session (`npm run agent`), so ordinary sessions in this repo never
+ * spend Kane credits.
  */
 
 const { spawnSync } = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { parseNdjson, extractFindings, buildHealPrompt } = require("./lib/heal");
@@ -26,7 +32,9 @@ const zooModule = () => {
 
 const ROOT = __dirname;
 const TRACE_DIR = path.join(ROOT, "kane-traces");
+const STATE_FILE = path.join(ROOT, ".data", "driftor-hook.json");
 const CONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, "driftor.config.json"), "utf8"));
+const MAX_ATTEMPTS = CONFIG.maxHealAttempts || 3;
 
 const line = (c = "=") => console.log(c.repeat(78));
 const passthrough = () => process.argv.slice(2).filter((a) => a === "--headless");
@@ -162,6 +170,121 @@ function cmdHeal() {
   }
 }
 
+/* ── Claude Code Stop hook ────────────────────────────────────────────────── */
+
+const SOURCE_EXT = /\.(tsx?|jsx?|css|json|mdx?)$/;
+
+/** Hash of every watched source file, so the hook only runs Kane when code changed. */
+function fingerprint() {
+  const hash = crypto.createHash("sha1");
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (SOURCE_EXT.test(entry.name)) hash.update(path.relative(ROOT, full)).update(fs.readFileSync(full));
+    }
+  };
+  for (const dir of CONFIG.watch || ["app"]) walk(path.join(ROOT, dir));
+  return hash.digest("hex");
+}
+
+function loadState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+  } catch {
+    return { verified: null, attempts: {} };
+  }
+}
+
+function saveState(state) {
+  fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function readStdin() {
+  try {
+    return JSON.parse(fs.readFileSync(0, "utf8") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+async function appIsUp() {
+  const explicit = process.env.DRIFTOR_URL || CONFIG.url;
+  const { ports = [3000, 3010], marker } = CONFIG.discover || {};
+  const candidates = explicit ? [explicit] : Array.from({ length: ports[1] - ports[0] + 1 }, (_, i) => `http://localhost:${ports[0] + i}`);
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      if (explicit || !marker || (await res.text()).includes(marker)) return true;
+    } catch {
+      /* keep scanning */
+    }
+  }
+  return false;
+}
+
+/**
+ * Runs when Claude Code is about to end its turn. If the watched source changed
+ * since the last green gate, run Kane. On failure, block the stop and hand Claude
+ * the evidence (the same prompt `--heal` uses), so it keeps fixing in the same
+ * session. After MAX_ATTEMPTS failures, let it stop and tell the human.
+ */
+async function cmdHook() {
+  const input = readStdin();
+  if (process.env.DRIFTOR_HOOK !== "1") return; // opt-in; see header comment
+  const out = (obj) => process.stdout.write(JSON.stringify(obj));
+  const session = input.session_id || "manual";
+
+  const state = loadState();
+  const hash = fingerprint();
+  if (hash === state.verified) return; // nothing changed since Kane last passed
+
+  if (!(await appIsUp())) {
+    out({ systemMessage: "Driftor: no running app found, so Kane didn't check this change. Start it with `npm run dev`." });
+    return;
+  }
+
+  process.stderr.write("Driftor: source changed — running the Kane gate in real Chrome…\n");
+  const { passed, output } = runGate({ capture: true, env: { DRIFTOR_TRIGGER: "claude-stop-hook" } });
+  fs.mkdirSync(TRACE_DIR, { recursive: true });
+  fs.appendFileSync(path.join(TRACE_DIR, "hook.log"), `\n# ${new Date().toISOString()} session ${session}\n${output}`);
+
+  if (passed) {
+    state.verified = fingerprint();
+    delete state.attempts[session];
+    saveState(state);
+    out({ systemMessage: `Driftor: Kane verified all ${CONFIG.objectives.length} objectives in real Chrome. ✓` });
+    return;
+  }
+
+  const attempt = (state.attempts[session] || 0) + 1;
+  if (attempt > MAX_ATTEMPTS) {
+    delete state.attempts[session];
+    saveState(state);
+    out({
+      systemMessage: `Driftor: Kane still fails after ${MAX_ATTEMPTS} fix attempts. Stopping the loop — a human needs to look. Evidence: kane-traces/`,
+    });
+    return;
+  }
+  state.attempts[session] = attempt;
+  saveState(state);
+
+  const findings = readFindings();
+  const evidence = findings.length
+    ? buildHealPrompt(findings, { app: CONFIG.app })
+    : `Kane CLI's gate failed but reported no failing step. Output:\n${output.slice(-3000)}`;
+  out({
+    decision: "block",
+    reason:
+      `Driftor ran your change through Kane CLI in real Chrome and it failed (attempt ${attempt} of ${MAX_ATTEMPTS}).\n\n` +
+      `${evidence}\n\n` +
+      "Fix it, then end your turn. Driftor re-runs Kane automatically when you stop.",
+  });
+}
+
 /* ── watch ────────────────────────────────────────────────────────────────── */
 
 function cmdWatch() {
@@ -193,7 +316,8 @@ const after = (f) => {
   return v && !v.startsWith("--") ? v : undefined;
 };
 
-if (args.includes("--inject")) cmdInject(after("--inject"));
+if (args.includes("--hook")) cmdHook();
+else if (args.includes("--inject")) cmdInject(after("--inject"));
 else if (args.includes("--list")) cmdList();
 else if (args.includes("--heal")) cmdHeal();
 else if (args.includes("--reset")) cmdReset();
