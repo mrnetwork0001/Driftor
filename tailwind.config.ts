@@ -2,24 +2,34 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        drift: {
-          50: "#fdf4ff",
-          100: "#fae8ff",
-          500: "#d946ef",
-          600: "#c026d3",
-          700: "#a21caf",
-          900: "#701a75",
+        // Driftor: drafting-table palette
+        paper: "#F3F1EC",
+        sheet: "#FAF9F6",
+        ink: "#17160F",
+        graphite: "#5F5B52",
+        rule: "#D8D3C8",
+        signal: "#D9412F",
+        pass: "#2E6B46",
+        // CloudScale: the demo target's own brand
+        cs: {
+          bg: "#F7F7F8",
+          line: "#E4E4E7",
+          text: "#18181B",
+          sub: "#71717A",
+          brand: "#2443B8",
+          brandHover: "#1C3696",
         },
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
       },
     },
   },
