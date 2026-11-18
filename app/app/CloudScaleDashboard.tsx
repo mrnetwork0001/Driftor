@@ -332,7 +332,9 @@ export default function CloudScaleDashboard() {
                         <td className="px-4 py-3 hidden sm:table-cell tabular-nums">
                           {k.rateLimitPerMin.toLocaleString("en-US")} / min
                         </td>
-                        <td className="px-4 py-3 text-cs-sub tabular-nums">{k.createdAt.slice(0, 10)}</td>
+                        <td className="px-4 py-3 text-cs-sub tabular-nums">
+                          {k.createdAt.slice(0, 10)} · {ago(k.createdAt, now)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
