@@ -3,5 +3,6 @@ node_modules
 .DS_Store
 *.log
 .env*.local
-kane-traces
+# Kane evidence is committed (the site reads it); the running aggregate is not.
+kane-traces/latest.ndjson
 .data
