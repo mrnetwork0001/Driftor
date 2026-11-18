@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-11-18T07:49:08.374Z",
+  "finishedAt": "2026-11-18T07:50:08.066Z",
+  "passed": true,
+  "trigger": "cli",
+  "regression": [],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  4 passed (4)"
+  },
+  "objectives": {
+    "mobile-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "375x812",
+      "title": "Mobile: quota top-up stays reachable (UC-03)",
+      "browser": "chrome device emulation via --cdp-endpoint"
+    }
+  }
+}

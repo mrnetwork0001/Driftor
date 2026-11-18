@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-11-18T07:50:50.085Z",
+  "finishedAt": "2026-11-18T07:52:00.779Z",
+  "passed": true,
+  "trigger": "cli",
+  "regression": [],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  4 passed (4)"
+  },
+  "objectives": {
+    "narrow-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "800x1000",
+      "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)"
+    }
+  }
+}
