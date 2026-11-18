@@ -1,147 +1,196 @@
 # Driftor
 
-> **Autonomous Visual Stacking, Viewport Occlusion & Layout Drift Gate for AI Coding Agents**  
-> *Built for the Kane CLI Online Hackathon (November 12 – 19, 2026) by TestMu AI*
+**Your tests clicked the button. Your users can't.**
 
-[![Kane CLI Verified](https://img.shields.io/badge/Verified%20with-Kane%20CLI%200.10.x-fuchsia.svg)](https://kaneclihack.sh)
-[![Next.js 14](https://img.shields.io/badge/Next.js-14.2.5-black.svg)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org)
-[![License](https://img.shields.io/badge/License-Apache%202.0-emerald.svg)](LICENSE)
+Driftor is a Claude Code hook that won't let a coding agent finish a UI change until **Kane CLI** has clicked through the app in real Chrome, in both its desktop and its mobile layout. When a click doesn't land, the hook hands Kane's evidence back to the agent in the same session. The agent fixes the bug, and Kane checks again.
 
----
+It exists for one class of bug that's easy for an agent to ship: the page *looks* right, every unit test passes, and the button doesn't work.
 
-## 🎯 The Problem: The JSDOM Blind Spot in AI Coding Agents
+Built for the Kane CLI Online Hackathon (TestMu AI, November 2026).
 
-Engineering teams using AI coding agents (Cursor, Claude Code, GitHub Copilot, Devin) face a common, silent failure mode:
-
-> **AI-generated pull requests compile cleanly and pass 100% of unit tests—yet completely break in real user browsers.**
-
-Why? Because unit test runners (Jest, Vitest) execute inside **JSDOM**:
-- JSDOM has **no CSS layout engine**.
-- JSDOM cannot compute **stacking contexts (`z-index`)**.
-- JSDOM does not perform coordinate hit-testing (`document.elementFromPoint`).
-- JSDOM does not simulate viewport resizing or mobile layout reflows.
-
-When an AI agent adds a floating announcement modal, cookie banner, or sticky toast, it often leaves a transparent full-width backdrop with `z-index: 50` and `pointer-events: auto`. 
-- In JSDOM, `getByRole('button').click()` succeeds.
-- In Google Chrome, real users click the invisible backdrop—and the button **never receives the click**.
+[![Kane CLI 0.10](https://img.shields.io/badge/Kane%20CLI-0.10.5-black.svg)](https://kaneclihack.sh)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-black.svg)](LICENSE)
 
 ---
 
-## 💡 The Solution: Driftor + Kane CLI 0.10.x
+## The blind spot
 
-**Driftor** is an autonomous pre-commit and CI/CD quality gate that closes this open loop. 
+Agents check their own UI work with unit tests: Vitest or Jest, running in JSDOM. JSDOM builds the DOM but never lays it out. It doesn't know what's on top of what, so `fireEvent.click(button)` reaches the button no matter what covers it.
 
-Using **Kane CLI 0.10.x**, Driftor:
-1. Boots the application across **Desktop (1920x1080)** and **Mobile (375x812)** viewports.
-2. Dispatches coordinate-level user journeys in real Google Chrome.
-3. Performs live element hit-testing: if a modal backdrop or floating layer intercepts the mouse event, Kane immediately captures the `OCCLUSION_CLICK_INTERCEPTED` NDJSON failure verdict.
-4. Triggers an autonomous **Red-Green-Heal reflex**: passes the failure evidence to an AI agent, surgically patches the CSS stacking context in the source file, and re-runs Kane until **100% GREEN**.
+Driftor ships with a **bug zoo**: three one-line regressions an agent could plausibly make. All three keep the unit suite green and break a real click.
+
+| Bug | The one-line change | Unit tests (JSDOM) | Kane · desktop 1920×1080 | Kane · narrow 800×1000 | Run |
+|---|---|---|---|---|---|
+| *healthy* | none | ✓ 4 passed (4) | ✓ pass | ✓ pass | [run](kane-traces/runs/2026-11-18T07-52-23-072Z/run.json) |
+| `overlay`: Transparent full-screen wrapper takes the clicks | `app/app/MaintenanceNotice.tsx`: `className="pointer-events-none fixed inset-0 z-50"` → `className="fixed inset-0 z-50"` | ✓ 4 passed (4) | **✗ fail** | **✗ fail** | [run](kane-traces/runs/2026-11-18T07-54-35-217Z/run.json) |
+| `pointer-events`: Loading-state class left on the button | `app/app/CloudScaleDashboard.tsx`: `className="shrink-0 rounded-md bg-cs-brand` → `className="pointer-events-none shrink-0 rounded-md bg-cs-brand` | ✓ 4 passed (4) | **✗ fail** | ✓ pass | [run](kane-traces/runs/2026-11-18T07-56-14-114Z/run.json) |
+| `opacity`: Closed mobile menu faded out, not removed | `app/app/CloudScaleDashboard.tsx`: `: "invisible opacity-0"` → `: "opacity-0"` | ✓ 4 passed (4) | ✓ pass | **✗ fail** | [run](kane-traces/runs/2026-11-18T07-58-22-453Z/run.json) |
+
+Every verdict above comes from a real run archived in [`kane-traces/runs/`](kane-traces/runs/). The site's *Bug zoo* section reads them live.
 
 ---
 
-## 🏛️ Architecture Overview
+## The loop
 
 ```
-                                  ┌─────────────────────────────┐
-                                  │   PRD / Specification Docs  │
-                                  │       (specs/PRD.md)        │
-                                  └──────────────┬──────────────┘
-                                                 │
-                                                 ▼
-┌─────────────────────────────┐   kane-cli context & design   ┌─────────────────────────────┐
-│    CloudScale Target App    │◄──────────────────────────────┤  Kane CLI Assurance Engine  │
-│      (Next.js 14 + TS)      │                               │  - Multi-Viewport Journeys  │
-│  - Desktop (1920x1080)      │                               │  - Computed Hit-Testing     │
-│  - Mobile Viewport (375px)  │                               │  - NDJSON Telemetry Stream  │
-│  - Primary CTA Provisioning │                               └──────────────┬──────────────┘
-└──────────────┬──────────────┘                                              │
-               │                                                             │
-               │ real Chrome click dispatch                                  ▼
-               └───────────────────────────► ┌──────────────────────────────────────────────┐
-                                             │       Autonomous Guardian (driftor.js)       │
-                                             │  1. Injects modal backdrop occlusion         │
-                                             │  2. Kane catches CLICK_INTERCEPTED in Chrome │
-                                             │  3. NDJSON trace parsed for failing bounds   │
-                                             │  4. Coding Agent auto-patches CSS stacking   │
-                                             │  5. Re-runs Kane to 100% GREEN verification  │
-                                             └──────────────────────────────────────────────┘
+  you: "add X"  ──►  Claude Code edits the app, unit tests pass, tries to end its turn
+                          │
+                          ▼  Stop hook: driftor.js --hook
+                 source changed since the last green run?  ── no ──►  turn ends
+                          │ yes
+                          ▼
+                 kane-cli run "<objective>" --agent      (real Chrome, 1920×1080 and 800×1000)
+                          │
+               passed ────┴──── failed
+                 │                 │
+           turn ends,        {"decision": "block", "reason": <Kane's failing steps + raw NDJSON>}
+           "verified ✓"            │
+                                   ▼
+                          Claude fixes it in the same session, tries to stop again ──► (hook runs Kane again)
+                          after 3 failed attempts the turn ends and a human gets the evidence
 ```
+
+- **Objectives are plain English** ([`driftor.config.json`](driftor.config.json)). They say what a user does and what should happen, never a selector or a coordinate. They also require a *mouse* click: without that, Kane's agent once reached a covered button with Tab + Enter and passed, which a mouse user never could.
+- **Every run starts from the same state.** Before each objective the runner calls the app's reset endpoint, then sets Kane's window to the objective's viewport. It restores your window size afterwards, including on Ctrl-C.
+- **Every gate run is archived** to `kane-traces/runs/<timestamp>/`. Each one has a `run.json` recording what triggered it (hook, CLI or watcher), the unit-suite result, which bug was injected, and each objective's verdict.
+- **The agent gets evidence, not the answer.** The feedback holds Kane's failing steps, its end-of-run analysis and the raw NDJSON. It never names the file or the fix. The agent may not edit tests, objectives, Driftor or the traces.
+- **The hook is opt-in.** It only acts in sessions started with `DRIFTOR_HOOK=1` (`npm run agent`), so an ordinary Claude session in this repo never spends Kane credits. It skips Kane entirely when the source hasn't changed since the last green run.
+
+### Two real sessions
+
+Both ran as `DRIFTOR_HOOK=1 claude -p "<prompt>"` against this repo. Transcripts, diffs and the hook's Kane runs are in [`kane-traces/agent-sessions/`](kane-traces/agent-sessions/), and the site replays them.
+
+**1. A bug already on the branch, an unrelated request.** With `overlay` injected (Claude wasn't told), the prompt was *"show each API key's age next to its created date"*.
+
+```
+claude      Done — one-line change at app/app/CloudScaleDashboard.tsx:335
+driftor ✗   Driftor ran your change through Kane CLI in real Chrome and it failed (attempt 1 of 3).
+            [Kane's failing steps + raw NDJSON: the click on "Generate Production API Key" never landed]
+claude      Let me look for what's covering those buttons.
+claude      Found it. MaintenanceNotice renders a fixed inset-0 z-50 layer over the entire viewport …
+            pointer-events-none is missing on the outer div, so that invisible full-screen layer swallows every click
+✎           app/app/MaintenanceNotice.tsx
+driftor ✓   Driftor: Kane verified all 2 objectives in real Chrome. ✓
+```
+
+That's 12 turns and 291 s in one session, with no human in it. The hook's two gate runs are archived with `"trigger": "claude-stop-hook"`: the [failed run](kane-traces/runs/2026-11-18T08-00-54-950Z/run.json) and the [passing run](kane-traces/runs/2026-11-18T08-03-06-216Z/run.json).
+
+**2. Unscripted: "add a cookie consent banner".** On healthy code, Claude wrote `CookieConsent.tsx` (a bottom bar layered above the maintenance toast, with the choice saved in localStorage) and mounted it. When it stopped, Kane ran both objectives against the new banner and [passed them](kane-traces/runs/2026-11-18T08-08-24-322Z/run.json). That's the other half of the job: proving a change is safe, not only catching a broken one. The banner is still in the demo app.
 
 ---
 
-## ⚡ 30-Second Reproduction Guide for Judges
+## Run it
 
-You can run and verify the entire autonomous closed loop locally in under 30 seconds:
+**Requirements:** Node 18+, Google Chrome and a TestMu AI account for Kane CLI (`kane-cli` is installed as a dev dependency). For the agent loop you also need [Claude Code](https://claude.com/claude-code); `driftor:heal` falls back to Gemini CLI.
 
 ```bash
-# 1. Clone & install dependencies
 git clone https://github.com/mrnetwork0001/Driftor.git
 cd Driftor
 npm install
+npm run kane:login          # one-time, opens the browser
 
-# 2. Start the local server in Terminal 1
-npm run dev
-# Running at http://localhost:3000
-
-# 3. In Terminal 2: Run baseline visual verification
-npm run driftor:test
-# ✓ Kane drives Chrome: All viewports unobstructed (100% GREEN)
-
-# 4. Inject visual stacking regression (passes JSDOM, blocks Chrome)
-npm run driftor:inject
-# Patches lib/visual-drift.ts: BANNER_OCCLUSION = true (Backdrop z-50 traps clicks)
-
-# 5. Kane CLI catches the click interception live in Chrome
-npm run driftor:test
-# ❌ Step 2 FAILED: Click intercepted by DIV#occlusion-backdrop at (840, 195)
-
-# 6. Trigger Autonomous Self-Healing
-npm run driftor:heal
-# 🔁 Agent reads NDJSON trace, repairs stacking context, Kane re-runs to 100% GREEN!
+npm run dev                 # terminal 1: the site and the demo app
+npm run driftor:preflight   # terminal 2: checks Node, Kane login, the app, an agent
 ```
 
-*(Note: For offline judge evaluation without an active TestMu AI cloud balance, pass `--mock` to run with deterministic NDJSON emulation: `node driftor_test.js --mock`)*
+**The agent loop:**
 
----
+```bash
+npm run driftor:inject -- overlay   # put a bug from the zoo on the branch (unit tests still pass)
+npm run agent                       # Claude Code with the hook armed; ask it for any change
+```
 
-## 🎯 Evaluated Against the 4 Judging Dimensions
+When Claude tries to finish, Kane runs. The failure goes back to Claude, and it keeps working until Kane passes.
 
-| Judging Dimension | How Driftor Delivers |
+**The gate on its own:**
+
+```bash
+npm run driftor:gate                # every objective in Chrome; exits 1 on failure
+npm run driftor:zoo                 # list the bugs
+npm run driftor:inject -- opacity   # inject one (reverts any other first)
+npm run driftor:heal                # one-shot: send the evidence to claude -p, then re-verify
+npm run driftor:reset               # revert any injected bug
+```
+
+Each Kane objective takes about a minute, so a full gate (two objectives) takes about two minutes.
+
+### All commands
+
+| Command | What it does |
 |---|---|
-| **1. Ships** | Production-ready Next.js 14 full-stack platform featuring the CloudScale API Gateway target application (`/app`), interactive Overview, and a live Mission Control HUD (`/hud`). |
-| **2. Verified** | Exercises computed visual stacking contexts and element hit-testing across desktop and mobile viewports in real Chrome that unit tests structurally cannot inspect. |
-| **3. Closed Loop** | Fully automated end-to-end feedback loop: Bug Injection $\to$ Kane Chrome Run $\to$ NDJSON Occlusion Failure $\to$ Agent CSS Patch $\to$ Kane Re-Verification Green. |
-| **4. Craft** | Built as a real developer tool (`driftor.js`) with formal PRD specifications, runnable `*_test.md` suites, sealed NDJSON evidence packs, and zero-config reproducibility. |
+| `npm run dev` | Next.js on the first free port from 3000. The runner finds it automatically. |
+| `npm run agent` | `DRIFTOR_HOOK=1 claude`: Claude Code with the Kane Stop hook armed. |
+| `npm run driftor:gate` | Runs every objective; exits 1 if any fails. Add `-- --headless` for CI, `-- --url <url>` for another app. |
+| `npm run driftor:test` | Same runner directly. `-- --only narrow-viewport-gate` runs one objective. |
+| `npm run driftor:zoo` | Lists the bug-zoo regressions and which one is live. |
+| `npm run driftor:inject -- <bug>` | Injects a bug (`overlay` by default), then runs the unit tests to show they still pass. |
+| `npm run driftor:reset` | Reverts any injected bug. |
+| `npm run driftor:heal` | One-shot heal for agents without hooks: prompt from the failing traces → `claude -p` (or `gemini`) → re-run the gate. |
+| `npm run driftor:watch` | Re-runs the gate when watched source changes. |
+| `npm run driftor:preflight` | Checks Node, `kane-cli`, the Kane login, the running app and a heal agent. |
+| `npm run test:unit` | The JSDOM unit suite ([`tests/unit/`](tests/unit/)). |
+
+### Point it at your own app
+
+Copy [`driftor.config.json`](driftor.config.json) and [`.claude/settings.json`](.claude/settings.json) into your project, plus `driftor.js`, `driftor_test.js` and `lib/heal.js`. Then edit the config:
+
+```jsonc
+{
+  "app": "my storefront (Next.js, source in src/)",   // how the agent's bug report names your app
+  "url": "http://localhost:5173",                     // or null to scan localhost ports for "marker"
+  "reset": null,                                      // optional POST endpoint to reset state before each objective
+  "unit": "npm test",                                 // optional: recorded next to Kane's verdict
+  "watch": ["src"],                                   // the hook only runs Kane when these change
+  "maxHealAttempts": 3,
+  "objectives": [
+    { "id": "checkout", "viewport": "1920x1080", "title": "Checkout works",
+      "objective": "Open {{url}}/cart. Click \"Checkout\" with a mouse click, as a user would. Verify the page shows \"Order confirmed\"." }
+  ]
+}
+```
+
+### In CI
+
+```yaml
+- run: npm ci
+- run: npm run build && (npm start &) && npx wait-on http://localhost:3000
+- run: npx kane-cli login --username "$KANE_USER" --access-key "$KANE_KEY"
+- run: npm run driftor:gate -- --headless
+```
+
+Store the Kane credentials as repository secrets.
 
 ---
 
-## 📁 Repository Structure
+## What's in the box
 
-```
-Driftor/
-├── app/
-│   ├── app/page.tsx         # CloudScale API Gateway (Target app under Driftor protection)
-│   ├── hud/page.tsx         # Driftor Mission Control HUD (Telemetry & Stacking Inspector)
-│   ├── globals.css          # Tailwind CSS styling & glow filters
-│   ├── layout.tsx           # Root Layout with data-driftor="active" marker
-│   └── page.tsx             # Interactive Overview & JSDOM Blind Spot Showcase
-├── lib/
-│   └── visual-drift.ts      # CSS Stacking & Occlusion anchor point
-├── specs/
-│   └── PRD.md               # Kane CLI 0.10.x Requirements Specification
-├── tests/
-│   ├── desktop_occlusion_test.md   # Kane CLI Markdown Test: Desktop Stacking
-│   └── mobile_viewport_test.md     # Kane CLI Markdown Test: Mobile Viewport
-├── kane-traces/             # Sealed NDJSON execution evidence packs
-├── driftor_test.js          # Kane CLI Verification Runner with --agent NDJSON streaming
-├── driftor.js               # Autonomous Developer CLI & Closed-Loop Guardian
-├── package.json
-└── README.md
-```
+| Path | What |
+|---|---|
+| [`/`](app/(site)/page.tsx) | The Driftor site. Its bug zoo, verdict panels and run log read the archived runs in `kane-traces/runs/`. |
+| [`/app`](app/app/) | **CloudScale**, the demo app Driftor guards: an API-gateway dashboard with a real backend ([`app/api/cloudscale/`](app/api/cloudscale/)). Keys come from a CSPRNG and only the prefix is stored; quota and an audit log persist to `.data/cloudscale.json`. |
+| [`/hud`](app/(site)/hud/page.tsx) | Traces viewer: every objective's NDJSON events, plus the exact feedback the agent would get right now. |
+| [`.claude/settings.json`](.claude/settings.json) | Registers the Stop hook. |
+| [`driftor.js`](driftor.js) | CLI: gate, `--hook`, `--heal`, `--watch`, `--inject`, `--list`, `--reset`. |
+| [`driftor_test.js`](driftor_test.js) | Kane runner: config, viewport switching, state reset, unit verdict, retry on no-verdict, archiving. |
+| [`driftor.config.json`](driftor.config.json) | Objectives and app settings. |
+| [`lib/heal.js`](lib/heal.js) | NDJSON → findings → the agent's bug report. Shared by the CLI, the hook and the website. |
+| [`lib/regressions.js`](lib/regressions.js) | The bug zoo. |
+| [`kane-traces/`](kane-traces/) | Archived gate runs (`runs/`), agent sessions (`agent-sessions/`) and runs set aside with an explanation (`discarded-runs/`). |
+| [`specs/PRD.md`](specs/PRD.md) | The use cases (UC-01 to UC-03) the objectives check. |
+| [`tests/unit/`](tests/unit/) | The JSDOM suite that can't see the bugs. |
 
 ---
 
-## 📜 License
+## Honest limits
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+- **Kane's end-of-run summary can be wrong about transparent layers.** It reasons from a screenshot, and sometimes says the button was *not* covered when it was. The step-level events (the click that couldn't land) are right. The agent's feedback says so.
+- **Kane can also be stricter than a browser.** An early version of the demo app had a decorative gradient layer *behind* the key button. Real clicks reached the button, but Kane's agent treated the overlapping layer as covering it and failed the healthy app. We removed the layer and re-ran everything; those runs are kept in [`kane-traces/discarded-runs/`](kane-traces/discarded-runs/). Keep decorative layers out of a button's box.
+- **Kane can't render a phone-width web page.** `kane-cli config set-window` accepts widths from 800 to 3840 px, and Kane resets the viewport to its configured window even when attached to a phone-emulated Chrome over `--cdp-endpoint` (we tried). So the second objective runs at 800×1000: below the demo app's 1024px breakpoint, so it gets the mobile layout, but it isn't a 375px phone. Real phones in Kane mean its native-app emulator/device targets. Also note: `set-window` exits 0 even when it rejects a size, so the runner reads the setting back and stops if it didn't change.
+- **Kane's window size is a global setting.** The runner changes it per objective and restores it afterwards. Don't run two gates at once.
+- **The zoo's bugs are injected on purpose**, so the demo is repeatable. The hook and gate are generic: see the agent sessions in `kane-traces/agent-sessions/` for unscripted runs.
+- **Kane runs cost credits.** Check with `npm run kane:balance`.
+
+## License
+
+[Apache 2.0](LICENSE)
