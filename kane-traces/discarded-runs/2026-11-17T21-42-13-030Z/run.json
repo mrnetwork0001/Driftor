@@ -1,0 +1,15 @@
+{
+  "startedAt": "2026-11-17T21:42:13.030Z",
+  "finishedAt": "2026-11-17T21:44:27.789Z",
+  "passed": true,
+  "objectives": {
+    "desktop-occlusion-gate": {
+      "verdict": "passed",
+      "viewport": "1920x1080"
+    },
+    "mobile-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "375x812"
+    }
+  }
+}
