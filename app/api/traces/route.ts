@@ -45,6 +45,21 @@ export interface RunSummary {
   objectives: Record<string, { verdict: string; viewport?: string; title?: string }>;
 }
 
+export interface SessionStep {
+  kind: "prompt" | "claude" | "edit" | "hook-block" | "hook-pass" | "hook-note" | "result";
+  text: string;
+}
+
+export interface AgentSession {
+  id: string;
+  label: string;
+  startedAt: string;
+  /** Bug-zoo regression already on the branch when the session started, if any. */
+  injected: string | null;
+  steps: SessionStep[];
+  diff: string;
+}
+
 export interface ZooEntry {
   name: string;
   title: string;
@@ -66,6 +81,8 @@ export interface TracesResponse {
   runs: RunSummary[];
   /** The bug-zoo regressions driftor.js can inject. */
   zoo: ZooEntry[];
+  /** Real Claude Code sessions run with the Driftor Stop hook armed, newest first. */
+  sessions: AgentSession[];
 }
 
 function parseForDisplay(text: string): TraceEvent[] {
@@ -145,6 +162,55 @@ function listRuns(): RunSummary[] {
   return out;
 }
 
+/** Turns a `claude -p --output-format stream-json` transcript into a readable timeline. */
+function listSessions(): AgentSession[] {
+  const dir = path.join(TRACE_DIR, "agent-sessions");
+  if (!fs.existsSync(dir)) return [];
+  const out: AgentSession[] = [];
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort().reverse()) {
+    const id = file.replace(/\.jsonl$/, "");
+    const metaPath = path.join(dir, `${id}.meta.json`);
+    if (!fs.existsSync(metaPath)) continue; // still running
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+    const steps: SessionStep[] = [{ kind: "prompt", text: meta.prompt }];
+    for (const raw of fs.readFileSync(path.join(dir, file), "utf8").split("\n")) {
+      let e: any;
+      try {
+        e = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      if (e.type === "assistant") {
+        for (const c of e.message?.content ?? []) {
+          if (c.type === "text" && c.text.trim()) steps.push({ kind: "claude", text: c.text.trim() });
+          if (c.type === "tool_use" && (c.name === "Edit" || c.name === "Write"))
+            steps.push({ kind: "edit", text: String(c.input?.file_path ?? "").replace(process.cwd() + "/", "") });
+        }
+      } else if (e.type === "user") {
+        const content = Array.isArray(e.message?.content) ? e.message.content : [{ type: "text", text: e.message?.content }];
+        for (const c of content) {
+          if (c.type === "text" && typeof c.text === "string" && c.text.startsWith("Stop hook feedback:"))
+            steps.push({ kind: "hook-block", text: c.text.replace(/^Stop hook feedback:\s*/, "") });
+        }
+      } else if (e.type === "system" && e.subtype === "informational" && typeof e.content === "string") {
+        steps.push({ kind: /verified/.test(e.content) ? "hook-pass" : "hook-note", text: e.content.replace(/^Stop says:\s*/, "") });
+      } else if (e.type === "result") {
+        steps.push({ kind: "result", text: `${e.subtype} · ${e.num_turns} turns · ${Math.round((e.duration_ms ?? 0) / 1000)}s` });
+      }
+    }
+    const diffPath = path.join(dir, `${id}.diff`);
+    out.push({
+      id,
+      label: meta.label,
+      startedAt: meta.startedAt,
+      injected: meta.injected && meta.injected !== "none" ? meta.injected : null,
+      steps,
+      diff: fs.existsSync(diffPath) ? fs.readFileSync(diffPath, "utf8").replace(/^(---|\+\+\+) .*\/(app|components|lib)\//gm, "$1 $2/") : "",
+    });
+  }
+  return out;
+}
+
 export async function GET() {
   const { files, findings } = readDir(TRACE_DIR);
   const body: TracesResponse = {
@@ -153,6 +219,7 @@ export async function GET() {
     healPrompt: findings.length ? buildHealPrompt(findings) : null,
     lastFailingRun: lastFailingRun(),
     runs: listRuns(),
+    sessions: listSessions(),
     zoo: Object.entries(REGRESSIONS as Record<string, Omit<ZooEntry, "name">>).map(([name, r]) => ({ name, ...r })),
   };
   return NextResponse.json(body);
