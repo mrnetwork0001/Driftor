@@ -1,0 +1,26 @@
+diff -ru /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.T0ryAtjglf/app/app/CloudScaleDashboard.tsx app/app/CloudScaleDashboard.tsx
+--- /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.T0ryAtjglf/app/app/CloudScaleDashboard.tsx	2026-11-18 09:00:30
++++ app/app/CloudScaleDashboard.tsx	2026-11-18 09:00:47
+@@ -332,7 +332,9 @@
+                         <td className="px-4 py-3 hidden sm:table-cell tabular-nums">
+                           {k.rateLimitPerMin.toLocaleString("en-US")} / min
+                         </td>
+-                        <td className="px-4 py-3 text-cs-sub tabular-nums">{k.createdAt.slice(0, 10)}</td>
++                        <td className="px-4 py-3 text-cs-sub tabular-nums">
++                          {k.createdAt.slice(0, 10)} · {ago(k.createdAt, now)}
++                        </td>
+                       </tr>
+                     ))}
+                   </tbody>
+diff -ru /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.T0ryAtjglf/app/app/MaintenanceNotice.tsx app/app/MaintenanceNotice.tsx
+--- /var/folders/0p/0w60759s1_3d6lxg8l834w8r0000gn/T/tmp.T0ryAtjglf/app/app/MaintenanceNotice.tsx	2026-11-18 09:00:30
++++ app/app/MaintenanceNotice.tsx	2026-11-18 09:03:01
+@@ -6,7 +6,7 @@
+  */
+ export default function MaintenanceNotice() {
+   return (
+-    <div data-testid="maintenance-layer" className="fixed inset-0 z-50">
++    <div data-testid="maintenance-layer" className="pointer-events-none fixed inset-0 z-50">
+       <div
+         role="status"
+         className="pointer-events-auto absolute bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100%-2rem)] sm:w-96 rounded-lg border border-cs-line bg-white shadow-lg p-4 text-sm"

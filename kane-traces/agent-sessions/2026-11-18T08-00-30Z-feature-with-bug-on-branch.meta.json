@@ -1,0 +1,1 @@
+{"label":"feature-with-bug-on-branch","startedAt":"2026-11-18T08-00-30Z","prompt":"In the CloudScale dashboard (app/app/CloudScaleDashboard.tsx), show each API key's age next to its created date in the keys table, for example '2026-11-15 · 3 d ago'. Reuse the existing ago() helper. Keep the change small.","injected":"overlay"}
