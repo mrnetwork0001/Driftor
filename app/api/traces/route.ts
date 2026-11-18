@@ -26,11 +26,20 @@ export interface TraceFile {
   events: TraceEvent[];
 }
 
+export interface FailingRun {
+  startedAt: string;
+  files: TraceFile[];
+  findings: Finding[];
+  healPrompt: string;
+}
+
 export interface TracesResponse {
   files: TraceFile[];
   findings: Finding[];
   /** Exactly what `driftor:heal` would send to the agent right now, or null if nothing failed. */
   healPrompt: string | null;
+  /** The most recent archived gate run that failed (kane-traces/runs/), for the landing page. */
+  lastFailingRun: FailingRun | null;
 }
 
 function parseForDisplay(text: string): TraceEvent[] {
@@ -72,12 +81,28 @@ function readDir(dir: string) {
   return { files, findings };
 }
 
+function lastFailingRun(): FailingRun | null {
+  const runsDir = path.join(TRACE_DIR, "runs");
+  if (!fs.existsSync(runsDir)) return null;
+  for (const id of fs.readdirSync(runsDir).sort().reverse()) {
+    const metaPath = path.join(runsDir, id, "run.json");
+    if (!fs.existsSync(metaPath)) continue;
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+    if (meta.passed) continue;
+    const { files, findings } = readDir(path.join(runsDir, id));
+    if (!findings.length) continue;
+    return { startedAt: meta.startedAt, files, findings, healPrompt: buildHealPrompt(findings) };
+  }
+  return null;
+}
+
 export async function GET() {
   const { files, findings } = readDir(TRACE_DIR);
   const body: TracesResponse = {
     files,
     findings,
     healPrompt: findings.length ? buildHealPrompt(findings) : null,
+    lastFailingRun: lastFailingRun(),
   };
   return NextResponse.json(body);
 }
