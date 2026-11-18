@@ -33,6 +33,17 @@ export interface FailingRun {
   healPrompt: string;
 }
 
+export interface RunSummary {
+  id: string;
+  startedAt: string;
+  passed: boolean;
+  trigger: string;
+  /** Bug-zoo regressions live during the run (empty = healthy source). */
+  regression: string[] | null;
+  unit: { command: string; passed: boolean; summary: string | null } | null;
+  objectives: Record<string, { verdict: string; viewport?: string; title?: string }>;
+}
+
 export interface TracesResponse {
   files: TraceFile[];
   findings: Finding[];
@@ -40,6 +51,8 @@ export interface TracesResponse {
   healPrompt: string | null;
   /** The most recent archived gate run that failed (kane-traces/runs/), for the landing page. */
   lastFailingRun: FailingRun | null;
+  /** Every archived gate run, newest first. */
+  runs: RunSummary[];
 }
 
 function parseForDisplay(text: string): TraceEvent[] {
@@ -96,6 +109,29 @@ function lastFailingRun(): FailingRun | null {
   return null;
 }
 
+function listRuns(): RunSummary[] {
+  const runsDir = path.join(TRACE_DIR, "runs");
+  if (!fs.existsSync(runsDir)) return [];
+  const out: RunSummary[] = [];
+  for (const id of fs.readdirSync(runsDir).sort().reverse()) {
+    try {
+      const m = JSON.parse(fs.readFileSync(path.join(runsDir, id, "run.json"), "utf8"));
+      out.push({
+        id,
+        startedAt: m.startedAt,
+        passed: !!m.passed,
+        trigger: m.trigger ?? "cli",
+        regression: Array.isArray(m.regression) ? m.regression : null,
+        unit: m.unit ?? null,
+        objectives: m.objectives ?? {},
+      });
+    } catch {
+      /* incomplete run */
+    }
+  }
+  return out;
+}
+
 export async function GET() {
   const { files, findings } = readDir(TRACE_DIR);
   const body: TracesResponse = {
@@ -103,6 +139,7 @@ export async function GET() {
     findings,
     healPrompt: findings.length ? buildHealPrompt(findings) : null,
     lastFailingRun: lastFailingRun(),
+    runs: listRuns(),
   };
   return NextResponse.json(body);
 }
