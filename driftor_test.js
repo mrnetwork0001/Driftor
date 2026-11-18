@@ -68,9 +68,12 @@ function getWindow() {
   }
 }
 
+// kane-cli exits 0 even when it rejects a size, so check the setting actually changed.
 function setWindow(size) {
   const res = spawnSync(KANE, ["config", "set-window", size], { encoding: "utf8" });
-  if (res.status !== 0) throw new Error(`kane-cli config set-window ${size} failed: ${res.stderr || res.stdout}`);
+  if (getWindow() !== size) {
+    throw new Error(`kane-cli config set-window ${size} did not take effect: ${(res.stdout || res.stderr || "").trim()}`);
+  }
 }
 
 
@@ -253,6 +256,7 @@ async function main() {
       line("-");
       console.log(` ${test.id} · ${test.viewport} · ${test.title}`);
       line("-");
+      // Kane CLI accepts window widths from 800 to 3840 px.
       if (test.viewport) setWindow(test.viewport);
       let result;
       for (let attempt = 1; attempt <= 2; attempt++) {
