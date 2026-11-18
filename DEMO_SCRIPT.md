@@ -1,78 +1,57 @@
-# Driftor: 3-5 Minute Demo Video Script
-### Target Duration: 3:30 - 4:00 | Video Host: YouTube (Public / Unlisted)
+# Driftor demo video (aim for 2:50; judges stop at 3:00)
+
+Judges watch this first, so open on the most interesting moment.
+
+**Before recording:**
+- `npm run dev` is running.
+- `npm run driftor:preflight` is all green.
+- Open these tabs: the landing page, `/app`, and `/hud`.
+- Have a terminal ready with a large font.
+
+Kane takes about a minute per objective. Record the hook session live and speed up the waiting (2–4×) in editing, keeping Kane's step lines readable.
 
 ---
 
-## ⏱️ [0:00 - 0:45] The Hook: The JSDOM Blind Spot in AI Coding Agents
+## 0:00–0:20 · The hook
 
-**Visual:**
-- Start on the Driftor Landing Page (`http://localhost:3000`).
-- Highlight the headline: *"Catching What JSDOM Cannot See: Autonomous Visual Stacking & Viewport Gate"*.
+**Show:** `/app`. Click **Generate Production API Key** and nothing happens. Then the terminal: `npm run test:unit` shows 4/4 green.
 
-**Narration:**
-> "Hey everyone! Today, AI coding agents like Cursor, Claude Code, and Copilot can write code faster than ever before. But they have a dangerous blind spot:
->
-> **They rely on JSDOM to test their code.**
->
-> JSDOM has no CSS layout engine. It doesn't compute bounding boxes, and it knows nothing about stacking contexts or `z-index`. An agent can create a beautiful modal or toast, and all your unit tests will pass 100%. But in a real browser, an invisible backdrop overlay traps clicks, and your primary checkout button is completely dead.
->
-> That's why we built **Driftor**: an autonomous visual stacking and viewport occlusion gate for AI-generated pull requests, powered by **Kane CLI 0.10.x**."
+> This button is dead, and every unit test passes. Unit tests run in JSDOM, which never lays out the page, so it can't see that something invisible is sitting on top of the button.
 
----
+(Before recording, run `npm run driftor:inject -- overlay` off camera.)
 
-## ⏱️ [0:45 - 1:45] The Target Application (CloudScale Gateway)
+## 0:20–1:30 · The loop, live
 
-**Visual:**
-- Navigate to `/app` (CloudScale AI Inference Gateway).
-- Point out the active API keys and the primary CTA button: **"Generate Production API Key"**.
-- Click the button to show the normal, healthy behavior: key count increments, action status reads `KEY_GENERATED_HEALTHY`, and confetti fires.
-- Switch to `/hud` (Driftor Mission Control HUD) to show real-time telemetry and the viewport matrix (Desktop 1920x1080 vs Mobile 375x812).
+**Terminal:** `npm run agent`, then ask Claude: *"Show each API key's age next to its created date."*
 
-**Narration:**
-> "Here is our target application: CloudScale, an AI inference gateway. The primary action on this page is generating a production API key.
->
-> In normal state, Kane CLI runs across both desktop and mobile viewports, dispatches clicks, and confirms all CTAs are unobstructed. Everything is 100% green."
+> I'm asking Claude for something unrelated. Driftor is a Claude Code Stop hook, so Claude can't finish until Kane CLI has clicked through the app in real Chrome.
 
----
+Show Claude finishing the feature and trying to stop. The hook runs Kane: show Chrome opening and Kane's steps, ending in `✗ … button is covered`. Then the hook feedback appears in Claude's session.
 
-## ⏱️ [1:45 - 2:45] Injecting the Visual Stacking Bug & Kane Catching It
+> Kane's verdict goes straight back into the same Claude session, with the failing steps and the raw trace. Claude isn't told what the bug is.
 
-**Visual:**
-- Open Terminal alongside the browser.
-- Run: `npm run driftor:inject`
-- Show Terminal output: `Patched lib/visual-drift.ts: BANNER_OCCLUSION = true`.
-- Switch back to `/app` to show the floating emergency maintenance banner with its transparent full-width backdrop overlay.
-- Run: `npm run driftor:test`
-- Show Google Chrome opening via Kane CLI. Kane attempts to click the "Generate Production API Key" button.
-- The click hits the backdrop overlay. Kane detects that `elementFromPoint` returned `DIV#occlusion-backdrop` instead of the button.
-- Show Terminal output showing Kane's NDJSON failure verdict: `OCCLUSION_CLICK_INTERCEPTED at coordinates (840, 195)`.
+Claude says *"Let me look for what's covering those buttons"*, edits `MaintenanceNotice.tsx`, and stops. Kane runs again: `Driftor: Kane verified all 2 objectives in real Chrome. ✓`
 
-**Narration:**
-> "Now let's simulate what happens when an AI agent modifies UI styling.
->
-> With one command—`npm run driftor:inject`—we introduce a real-world visual stacking bug: a floating maintenance notice renders with `z-index: 50` and an invisible backdrop that traps pointer events.
->
-> If you run Jest or Vitest, tests still pass! But watch what happens when we run **Driftor with Kane CLI**.
->
-> Kane CLI opens real Google Chrome, calculates coordinates, and attempts to dispatch the click. Boom! Kane catches the occlusion: the click hit the backdrop overlay instead of the button! Kane seals the evidence and outputs structured NDJSON."
+> It found a missing `pointer-events-none` on an invisible full-screen layer, fixed one word, and Kane proved it. No human in the loop. After three failed tries, it hands over to a person.
 
----
+## 1:30–2:10 · Not a one-trick demo
 
-## ⏱️ [2:45 - 3:45] The Closed Loop: Autonomous Self-Healing & Green Re-Run
+**Show:** the landing page, section *03 · Bug zoo*.
 
-**Visual:**
-- In Terminal, run: `npm run driftor:heal`
-- Show Driftor reading the failure trace, identifying the stacking context in `lib/visual-drift.ts`, repairing `BANNER_OCCLUSION = false`, and immediately triggering Kane re-verification.
-- Show Chrome re-opening, clicking the button without obstruction, and passing with **100% GREEN (ALL VISUAL GATES PASSED)**.
-- Show `/hud` with the live green verdict and self-healing CSS diff.
+> Three one-line bugs, each a plausible agent mistake. Unit tests pass every one. Kane fails each in the layout it actually breaks: desktop, the narrow mobile layout, or both. Every cell here is read from an archived Kane run.
 
-**Narration:**
-> "Now for the magic: **Closing the Loop**.
->
-> We run `npm run driftor:heal`. Driftor ingests Kane's NDJSON trace, feeds the exact overlay failure to the AI agent, automatically patches the CSS stacking context in `lib/visual-drift.ts`, and re-executes Kane CLI.
->
-> Look at the screen: Kane re-tests the app in Chrome, confirms the button is reachable, and returns 100% GREEN.
->
-> Zero human intervention. No broken UI ever reaches production. This is the power of combining AI coding agents with Kane CLI.
->
-> Thank you to the TestMu AI team!"
+**Show:** the run log in *05 · The evidence*. Point at the "Claude Code stop hook" rows.
+
+> And it isn't only a bug catcher. Asked for a cookie banner, Claude built one and Kane passed it first time. That's proof the change is safe.
+
+## 2:10–2:45 · Install it
+
+**Show:** `driftor.config.json`, then `.claude/settings.json`.
+
+> Your objectives are plain English in one config file, with no selectors. The hook is a single entry in Claude Code's settings. Point it at your own app and every UI change your agent makes has to get past a real browser.
+
+## 2:45–2:55 · Close
+
+**Show:** the landing hero.
+
+> Your tests clicked the button. Your users can't. Driftor makes Kane check before your agent says done.
