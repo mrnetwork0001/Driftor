@@ -1,10 +1,10 @@
 ---
-title: "Mobile Viewport Integrity & Quota Top-Up Test"
-description: "Verifies that secondary conversion paths function on 375x812 mobile viewports"
+title: "Mobile Layout Integrity & Quota Top-Up Test"
+description: "Verifies that secondary conversion paths function in the narrow, mobile layout (run with kane-cli config set-window 800x1000)"
 tags: ["visual-assurance", "mobile", "viewport"]
 ---
 
-# Mobile Viewport Action Test
+# Mobile Layout Action Test
 
 ## 1. Open CloudScale Gateway
 Open `http://localhost:3000/app` and wait for DOM hydration.

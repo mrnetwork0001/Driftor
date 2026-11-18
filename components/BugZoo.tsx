@@ -10,7 +10,7 @@ import type { RunSummary } from "@/app/api/traces/route";
 
 const OBJECTIVES = [
   { id: "desktop-occlusion-gate", label: "desktop", vp: "1920×1080" },
-  { id: "mobile-viewport-gate", label: "mobile", vp: "375×812" },
+  { id: "narrow-viewport-gate", label: "narrow", vp: "800×1000" },
 ];
 
 function ago(iso: string) {
@@ -57,7 +57,7 @@ export function BugZoo() {
         <span>the one-line change</span>
         <span>unit tests · jsdom</span>
         <span>kane · desktop</span>
-        <span>kane · mobile</span>
+        <span>kane · narrow</span>
       </div>
       {!data && <p className="py-5 font-mono text-sm text-graphite">reading kane-traces/…</p>}
       {data &&
@@ -124,7 +124,7 @@ export function RunLog({ limit = 12 }: { limit?: number }) {
             <th className="px-4 py-2 font-normal">injected</th>
             <th className="px-4 py-2 font-normal">unit</th>
             <th className="px-4 py-2 font-normal">desktop</th>
-            <th className="px-4 py-2 font-normal">mobile</th>
+            <th className="px-4 py-2 font-normal">narrow</th>
             <th className="px-4 py-2 font-normal">gate</th>
           </tr>
         </thead>
