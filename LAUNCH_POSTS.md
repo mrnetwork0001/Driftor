@@ -1,63 +1,48 @@
-# Driftor: Public Launch Posts
+# Driftor launch posts
 
-> [!NOTE]
-> The hackathon submission guidelines require at least **two public launch posts** (e.g. X / Twitter, LinkedIn, Reddit, Hacker News) sharing your project and linking to your submission. Use the pre-written posts below.
+The hackathon asks for at least two public posts (X, LinkedIn, Hacker News or Reddit) linking to the project. Hashtags and who to tag: https://www.kaneclihack.sh/o/launch. Add the repo, video and live links before posting.
 
 ---
 
-## 🐦 Post 1: X (Twitter) Launch Thread
+## Post 1 · X thread
 
-**Post Text:**
 ```
-🚨 AI coding agents generate code fast, but they have a massive blind spot: JSDOM.
+Your tests clicked the button. Your users can't.
 
-Unit tests pass 100%. But in real browsers, invisible CSS z-index backdrops occlude buttons and mobile viewports collapse.
+I built Driftor for the #KaneCLIHackathon: a Claude Code hook that won't let the agent say "done" until @TestMuAI Kane CLI has clicked through the app in real Chrome. 🧵
 
-Introducing Driftor: Autonomous Visual Stacking & Viewport Occlusion Gate for AI PRs, powered by @TestMuAI Kane CLI! 🧵👇
+1/ The bug class: one missing class on an invisible full-screen layer. Every button on the page is dead. Unit tests: 4/4 green, because JSDOM never lays out the page, so it can't see what's on top.
 
-1/ The JSDOM Blind Spot:
-Vitest/Jest have no layout engine and compute no stacking contexts. An agent can create a modal where an overlay blocks your primary CTA, yet unit tests click right through it. Real users hit a wall.
+2/ The loop: Claude finishes a change → Stop hook runs Kane on desktop + mobile layout → a click doesn't land → the hook blocks the stop and hands Claude Kane's evidence, same session → Claude fixes it → Kane re-verifies. 3 tries, then a human.
 
-2/ Plain-English Real-Browser Verification:
-Kane CLI 0.10.x opens real Google Chrome across Desktop (1920x1080) and Mobile (375x812) viewports, dispatches coordinate-level clicks, and catches intercepted mouse events with structured NDJSON telemetry.
+3/ In the recorded run I asked Claude for an unrelated feature while that bug sat on the branch. It shipped the feature, Kane caught the dead button, Claude found the missing pointer-events-none on its own, and Kane passed it. 12 turns, no human.
 
-3/ The Closed Loop (Red -> Green -> Heal):
-When an agent introduces a stacking bug (BANNER_OCCLUSION=true):
-1. Kane catches the intercepted click in Chrome.
-2. Driftor feeds the failure trace to the agent.
-3. The agent auto-patches the CSS stacking context.
-4. Kane re-runs in Chrome until 100% GREEN!
-Zero humans in the loop!
+4/ Plus a bug zoo of three one-line UI bugs that all pass unit tests and all fail in Kane, and every verdict is a real archived run. No mocks.
 
-Check out the repo & 30s reproduction:
-🔗 GitHub: https://github.com/mrnetwork0001/Driftor
-⚡ Built for the @TestMuAI Kane CLI Hackathon!
-
-#KaneCLI #AIAgents #WebDev #Automation #DevOps #Testing
+<repo link> · <video link>
+#KaneCLI #ClaudeCode #AIAgents
 ```
 
 ---
 
-## 💼 Post 2: LinkedIn / Hacker News / Reddit Post
+## Post 2 · LinkedIn / Hacker News / Reddit
 
-**Post Title:**
-`Driftor: Catching What JSDOM Cannot See in AI Coding Agents with Kane CLI 0.10.x`
+**Title:** I made Claude Code prove its UI changes in a real browser before it's allowed to say "done"
 
-**Post Body:**
-```markdown
-While AI coding assistants (Cursor, Claude Code, Copilot) have accelerated software development, they share a critical vulnerability: they rely on unit tests running in JSDOM.
+```
+Coding agents check their UI work with unit tests, and unit tests run in JSDOM. JSDOM builds the DOM but never lays it out. It doesn't know what's on top of what, so a test can "click" a button that no real user can reach.
 
-Because JSDOM has no CSS layout engine, it cannot compute stacking contexts (`z-index`) or perform coordinate hit-testing. When an AI agent introduces a floating banner, modal, or toast with a transparent backdrop, unit tests click the button successfully—while in real user browsers, the button is completely occluded and unreachable.
+Three one-line changes an agent could easily make, each of which leaves the unit suite green and a button dead:
+• a full-screen wrapper (there to position a toast) loses pointer-events-none
+• a loading-state pointer-events-none is left on the button
+• a closed mobile menu is faded with opacity-0 but not made invisible, so it still catches taps
 
-For the TestMu AI Kane CLI Online Hackathon, I built **Driftor**: an Autonomous Visual Stacking, Viewport Occlusion & Layout Drift Gate for AI PRs.
+For the TestMu AI Kane CLI hackathon I built Driftor, a Claude Code Stop hook. When the agent tries to end its turn after changing the UI, Driftor runs plain-English Kane CLI objectives in real Chrome, at desktop size and in the app's mobile layout. If a click doesn't land, the hook blocks the stop and gives Claude Kane's failing steps and raw trace, in the same session, without telling it what the bug is. Claude fixes it, and Kane re-verifies. After three tries a human gets the evidence.
 
-Here is how it works:
-1. **Multi-Viewport Testing:** Driftor drives Google Chrome across Desktop (1920x1080) and Mobile (375x812) viewports using natural-language Kane CLI objectives.
-2. **Computed Hit-Testing:** Kane evaluates real element hit-testing in Chrome, detecting when a modal overlay intercepts clicks intended for the primary CTA and emitting an `OCCLUSION_CLICK_INTERCEPTED` NDJSON failure verdict.
-3. **Autonomous Self-Healing:** Driftor feeds the failure context to an AI coding agent, applies the surgical CSS patch in the component, and re-executes Kane CLI until a 100% GREEN pass is achieved.
+Things I learned about Kane along the way:
+• Ask it to "click the button" and it may Tab + Enter around a covered one. Say "with a mouse click".
+• Its end-of-run summary can misjudge transparent layers; the step-level evidence is what to trust.
+• Web runs bottom out at 800px wide, and `config set-window` rejects smaller sizes but still exits 0, so check the setting actually changed.
 
-Reproducible in under 30 seconds:
-GitHub: https://github.com/mrnetwork0001/Driftor
-
-Huge kudos to the TestMu AI team for building Kane CLI!
+Repo, with real traces and agent transcripts: <repo link>
 ```
