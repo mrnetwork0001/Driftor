@@ -14,11 +14,25 @@ export interface ApiKey {
   rateLimitPerMin: number;
 }
 
+export interface ActivityEntry {
+  at: string;
+  kind: "key.created" | "quota.topup" | "workspace.reset";
+  message: string;
+}
+
 export interface CloudScaleState {
   keys: ApiKey[];
   quotaCents: number;
   status: ActionStatus;
   updatedAt: string;
+  /** Audit log, newest first, capped at ACTIVITY_LIMIT. */
+  activity: ActivityEntry[];
+}
+
+export const ACTIVITY_LIMIT = 20;
+
+function log(state: CloudScaleState, entry: ActivityEntry): ActivityEntry[] {
+  return [entry, ...(state.activity ?? [])].slice(0, ACTIVITY_LIMIT);
 }
 
 export const TOPUP_CENTS = 25_000;
@@ -44,6 +58,11 @@ export function seedState(now = new Date()): CloudScaleState {
     quotaCents: 450_000,
     status: "SYSTEM_READY",
     updatedAt: now.toISOString(),
+    activity: [
+      { at: now.toISOString(), kind: "workspace.reset", message: "Workspace restored to its seed state" },
+      { at: "2026-11-17T08:40:00.000Z", kind: "key.created", message: "KEY-002 “Staging verifier” created" },
+      { at: "2026-11-15T09:12:00.000Z", kind: "key.created", message: "KEY-001 “Production LLM routing” created" },
+    ],
   };
 }
 
@@ -65,13 +84,30 @@ export function generateKey(state: CloudScaleState, now = new Date()): { state: 
     rateLimitPerMin: 15_000,
   };
   return {
-    state: { ...state, keys: [key, ...state.keys], status: "KEY_GENERATED_HEALTHY", updatedAt: now.toISOString() },
+    state: {
+      ...state,
+      keys: [key, ...state.keys],
+      status: "KEY_GENERATED_HEALTHY",
+      updatedAt: now.toISOString(),
+      activity: log(state, { at: now.toISOString(), kind: "key.created", message: `${key.id} “${key.name}” created` }),
+    },
     secret,
   };
 }
 
 export function topUp(state: CloudScaleState, now = new Date()): CloudScaleState {
-  return { ...state, quotaCents: state.quotaCents + TOPUP_CENTS, status: "QUOTA_TOPUP_SUCCESS", updatedAt: now.toISOString() };
+  const quotaCents = state.quotaCents + TOPUP_CENTS;
+  return {
+    ...state,
+    quotaCents,
+    status: "QUOTA_TOPUP_SUCCESS",
+    updatedAt: now.toISOString(),
+    activity: log(state, {
+      at: now.toISOString(),
+      kind: "quota.topup",
+      message: `Quota topped up by ${formatUsd(TOPUP_CENTS)}, balance ${formatUsd(quotaCents)}`,
+    }),
+  };
 }
 
 export function formatUsd(cents: number): string {

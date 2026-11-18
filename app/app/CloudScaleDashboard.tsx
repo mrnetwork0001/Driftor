@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
-import { formatUsd, type CloudScaleState } from "@/lib/cloudscale";
+import { formatUsd, TOPUP_CENTS, type ActivityEntry, type CloudScaleState } from "@/lib/cloudscale";
 import MaintenanceNotice from "./MaintenanceNotice";
 
 /*
@@ -21,6 +21,7 @@ import MaintenanceNotice from "./MaintenanceNotice";
 const NAV = [
   { id: "keys", label: "API keys" },
   { id: "quota", label: "Quota" },
+  { id: "activity", label: "Activity" },
 ];
 
 function Logo() {
@@ -58,6 +59,12 @@ function useNow(ms = 15_000) {
   }, [ms]);
   return now;
 }
+
+const KIND_DOT: Record<ActivityEntry["kind"], string> = {
+  "key.created": "bg-cs-brand",
+  "quota.topup": "bg-emerald-500",
+  "workspace.reset": "bg-zinc-400",
+};
 
 export default function CloudScaleDashboard() {
   const [state, setState] = useState<CloudScaleState | null>(null);
@@ -111,7 +118,11 @@ export default function CloudScaleDashboard() {
 
   const status = state?.status ?? "LOADING";
   const statusTone = status === "SYSTEM_READY" || status === "LOADING" ? "bg-zinc-400" : "bg-emerald-500";
+  const activity = state?.activity ?? [];
   const totalRate = state?.keys.reduce((n, k) => n + k.rateLimitPerMin, 0) ?? 0;
+  // Counts since the last reset (the newest workspace.reset entry).
+  const resetAt = activity.find((a) => a.kind === "workspace.reset")?.at ?? "";
+  const since = (kind: ActivityEntry["kind"]) => activity.filter((a) => a.kind === kind && a.at > resetAt).length;
 
   return (
     <div className="min-h-screen bg-cs-bg text-cs-text text-sm">
@@ -306,6 +317,52 @@ export default function CloudScaleDashboard() {
                 </table>
               </div>
             </section>
+
+            <div className="mt-8 grid lg:grid-cols-[1fr_20rem] gap-6 items-start">
+              {/* Activity */}
+              <section id="activity" className="rounded-lg border border-cs-line bg-white scroll-mt-6">
+                <div className="px-4 py-4 border-b border-cs-line flex items-baseline justify-between gap-3">
+                  <h2 className="font-medium">Activity</h2>
+                  <span className="text-xs text-cs-sub">Audit log · newest first</span>
+                </div>
+                <ol data-testid="activity-log">
+                  {activity.length === 0 && <li className="px-4 py-6 text-center text-cs-sub">No activity yet.</li>}
+                  {activity.map((a, i) => (
+                    <li key={`${a.at}-${i}`} className="px-4 py-3 border-b border-cs-line last:border-0 flex items-start gap-3">
+                      <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${KIND_DOT[a.kind]}`} />
+                      <div className="min-w-0 flex-1">
+                        <div>{a.message}</div>
+                        <div className="text-xs text-cs-sub font-mono">{a.kind}</div>
+                      </div>
+                      <time dateTime={a.at} className="shrink-0 text-xs text-cs-sub tabular-nums" title={a.at}>
+                        {ago(a.at, now)}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+
+              {/* Billing summary */}
+              <section className="rounded-lg border border-cs-line bg-white">
+                <div className="px-4 py-4 border-b border-cs-line">
+                  <h2 className="font-medium">Billing</h2>
+                </div>
+                <dl className="px-4 py-3 grid grid-cols-[1fr_auto] gap-y-2 text-xs">
+                  <dt className="text-cs-sub">Plan</dt>
+                  <dd>Team · prepaid</dd>
+                  <dt className="text-cs-sub">Top-up increment</dt>
+                  <dd className="tabular-nums">{formatUsd(TOPUP_CENTS)}</dd>
+                  <dt className="text-cs-sub">Top-ups since reset</dt>
+                  <dd className="tabular-nums">{since("quota.topup")}</dd>
+                  <dt className="text-cs-sub">Keys issued since reset</dt>
+                  <dd className="tabular-nums">{since("key.created")}</dd>
+                </dl>
+                <p className="px-4 pb-4 text-xs text-cs-sub leading-relaxed">
+                  Driftor restores this workspace to its seed state before every Kane run, so every check starts from the
+                  same keys and balance.
+                </p>
+              </section>
+            </div>
           </main>
         </div>
       </div>

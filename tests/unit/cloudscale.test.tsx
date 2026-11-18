@@ -59,6 +59,7 @@ describe("CloudScale dashboard (JSDOM)", () => {
     expect(await screen.findByText("3 Keys")).toBeTruthy();
     expect(screen.getByTestId("key-status").textContent).toContain("KEY_GENERATED_HEALTHY");
     expect(screen.getByTestId("new-key-secret").textContent).toMatch(/^cs_live_[0-9a-f]{32}$/);
+    expect(screen.getByTestId("activity-log").textContent).toContain("KEY-003 “Agent fleet #3” created");
   });
 
   it("top-up adds $250 to the quota", async () => {
