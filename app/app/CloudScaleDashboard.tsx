@@ -72,6 +72,7 @@ export default function CloudScaleDashboard() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const now = useNow();
 
   useEffect(() => {
@@ -178,9 +179,30 @@ export default function CloudScaleDashboard() {
 
         <div className="min-w-0">
           {/* Mobile top bar */}
-          <div className="lg:hidden h-12 px-4 flex items-center justify-between border-b border-cs-line bg-white">
+          <div className="lg:hidden relative h-12 px-4 flex items-center justify-between border-b border-cs-line bg-white">
             <Logo />
-            <span className="text-xs text-cs-sub">Acme Research · prod</span>
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              className="rounded-md border border-cs-line px-2.5 py-1 text-xs"
+            >
+              {menuOpen ? "Close" : "Menu"}
+            </button>
+            {/* Fades in and out; when closed it must also be invisible, or it keeps catching taps. */}
+            <nav
+              id="mobile-menu"
+              aria-label="Sections"
+              className={`absolute inset-x-0 top-full z-40 h-[calc(100vh-5.25rem)] bg-white/95 px-4 py-3 flex flex-col gap-1 transition-opacity ${
+                menuOpen ? "opacity-100" : "invisible opacity-0"
+              }`}
+            >
+              {NAV.map((item) => (
+                <a key={item.id} href={`#${item.id}`} onClick={() => setMenuOpen(false)} className="rounded-md px-3 py-2 hover:bg-zinc-100">
+                  {item.label}
+                </a>
+              ))}
+            </nav>
           </div>
 
           {/* Bottom padding keeps content clear of the maintenance toast. */}
