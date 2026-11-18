@@ -1,0 +1,33 @@
+{
+  "app": "the CloudScale demo app (Next.js, source in app/app/)",
+  "url": null,
+  "discover": {
+    "ports": [
+      3000,
+      3010
+    ],
+    "marker": "data-driftor=\"active\""
+  },
+  "reset": "/api/cloudscale/reset",
+  "unit": "npx vitest run",
+  "watch": [
+    "app",
+    "components",
+    "lib"
+  ],
+  "maxHealAttempts": 3,
+  "objectives": [
+    {
+      "id": "desktop-occlusion-gate",
+      "viewport": "1920x1080",
+      "title": "Desktop: primary CTA receives the click (UC-01, UC-02)",
+      "objective": "Open {{url}}/app. Verify the heading contains \"CloudScale AI Inference Gateway\" and Active keys reads \"2 Keys\". Click the button \"Generate Production API Key\". Verify Action status displays \"KEY_GENERATED_HEALTHY\" and Active keys reads \"3 Keys\"."
+    },
+    {
+      "id": "mobile-viewport-gate",
+      "viewport": "375x812",
+      "title": "Mobile: quota top-up stays reachable (UC-03)",
+      "objective": "Open {{url}}/app. Verify Available quota reads \"$4,500.00\". Click \"+ Top Up Quota ($250)\". Verify Available quota reads \"$4,750.00\" and Action status displays \"QUOTA_TOPUP_SUCCESS\"."
+    }
+  ]
+}
