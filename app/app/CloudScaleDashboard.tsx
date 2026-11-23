@@ -45,6 +45,7 @@ function ago(iso: string, now: number) {
   return `${Math.round(s / 86400)} d ago`;
 }
 
+/** Workspace state changes on every write, so never answer from the browser's HTTP cache. */
 async function call<T>(path: string, method: "GET" | "POST" = "GET"): Promise<T> {
   const res = await fetch(path, { method, cache: "no-store" });
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
@@ -76,11 +77,15 @@ export default function CloudScaleDashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const now = useNow();
 
-  useEffect(() => {
-    call<CloudScaleState>("/api/cloudscale")
-      .then(setState)
-      .catch((e: Error) => setError(e.message));
+  // Re-reads the whole workspace. Called on load and after every write, so the
+  // dashboard shows what the server holds now, not what this tab last saw.
+  const refresh = useCallback(async () => {
+    setState(await call<CloudScaleState>("/api/cloudscale"));
   }, []);
+
+  useEffect(() => {
+    refresh().catch((e: Error) => setError(e.message));
+  }, [refresh]);
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -97,15 +102,16 @@ export default function CloudScaleDashboard() {
   const handleGenerateKey = () =>
     run(async () => {
       const res = await call<{ state: CloudScaleState; secret: string }>("/api/cloudscale/keys", "POST");
-      setState(res.state);
       setSecret(res.secret);
       setCopied(false);
+      await refresh();
       confetti({ particleCount: 60, spread: 55, origin: { y: 0.4 }, colors: ["#2443B8", "#18181B", "#A1A1AA"] });
     });
 
   const handleTopup = () =>
     run(async () => {
-      setState(await call<CloudScaleState>("/api/cloudscale/topup", "POST"));
+      await call<CloudScaleState>("/api/cloudscale/topup", "POST");
+      await refresh();
     });
 
   const copySecret = async () => {

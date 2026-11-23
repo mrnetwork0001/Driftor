@@ -10,7 +10,7 @@ import { AgentSession } from "@/components/AgentSession";
 // Every number here is true of this repo; the live cell reads kane-traces/.
 const STATS = [
   ["0", "selectors to maintain", "objectives are plain English"],
-  ["3", "bugs JSDOM passes", "overlay · pointer-events · opacity"],
+  ["5", "bugs JSDOM passes", "3 dead clicks · 1 hidden control · 1 stale read"],
   ["2", "viewports per run", "1920×1080 · 800×1000 (mobile layout)"],
   ["1", "hook closes the loop", "Claude Code Stop → Kane → fix"],
 ];
@@ -53,7 +53,7 @@ const FILES = [
   ["driftor.js", "The CLI: gate (default), `--hook`, `--heal`, `--watch`, and the bug zoo (`--inject <bug>`, `--list`, `--reset`)."],
   ["driftor_test.js", "Runs each objective through `kane-cli run --agent` at its viewport, resets app state first, runs the unit suite once, and archives everything to kane-traces/runs/."],
   ["lib/heal.js", "Turns failing NDJSON events into the agent’s bug report. The Traces page uses it too, so it shows the exact prompt."],
-  ["lib/regressions.js", "The bug zoo: three one-line UI regressions, each an exact, reversible swap in the demo app’s source."],
+  ["lib/regressions.js", "The bug zoo: five one-line UI regressions (dead clicks, a control hidden on narrow screens, a stale cached read), each an exact, reversible swap in the demo app’s source."],
   ["tests/unit", "Vitest + JSDOM suite for CloudScale. It stays green with every bug in the zoo, which is the point."],
   ["specs/PRD.md", "The CloudScale requirements. Every gate check maps to a use case here."],
   ["app/app", "CloudScale, the demo app under test, with a real backend in app/api/cloudscale."],
@@ -249,11 +249,12 @@ export default function Home() {
 
       {/* 03 */}
       <Section id="catalogue" n={3} label="Bug zoo">
-        <H2>Three one-line bugs. The unit tests pass every one.</H2>
+        <H2>Five one-line bugs. The unit tests pass every one.</H2>
         <Lede>
           Each is a change an agent could plausibly make, and each ships into the demo app with{" "}
           <code className="font-mono text-sm text-ink">npm run driftor:inject -- &lt;bug&gt;</code>. Driftor doesn’t look
-          for them by name: Kane clicks the way a person does, so anything that stops a real click shows up as a failed
+          for them by name: Kane uses the app the way a person does, so a click that never lands, a control missing from
+          the narrow layout, or a page that keeps showing the old balance after a successful write all end in a failed
           step. Every verdict below is read from an archived run in{" "}
           <code className="font-mono text-sm text-ink">kane-traces/runs/</code>.
         </Lede>

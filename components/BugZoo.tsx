@@ -5,7 +5,8 @@ import type { RunSummary } from "@/app/api/traces/route";
 
 /*
  * Bug zoo + run log, both read from kane-traces/runs/*\/run.json via /api/traces.
- * A verdict cell is only filled from a real archived Kane run; otherwise it says "not run".
+ * A verdict cell is only filled from a real archived Kane run. A bug with no archived
+ * run at all says "not run yet"; an objective missing from an existing run says "not run".
  */
 
 const OBJECTIVES = [
@@ -19,6 +20,10 @@ function ago(iso: string) {
   if (s < 3600) return `${Math.round(s / 60)}m ago`;
   if (s < 86400) return `${Math.round(s / 3600)}h ago`;
   return `${Math.round(s / 86400)}d ago`;
+}
+
+function NotRunYet() {
+  return <span className="text-graphite">not run yet</span>;
 }
 
 function Verdict({ v }: { v?: string }) {
@@ -74,6 +79,9 @@ export function BugZoo() {
                   <span className="font-medium">{row.title}</span>
                 </div>
                 <p className="mt-1 text-graphite leading-relaxed">{row.story}</p>
+                {!run && (
+                  <p className="mt-1 font-mono text-xs text-graphite">No archived gate run with this bug injected yet.</p>
+                )}
               </div>
               <div className="min-w-0 font-mono text-xs leading-6">
                 {row.diff ? (
@@ -88,12 +96,12 @@ export function BugZoo() {
               </div>
               <div className="font-mono text-xs">
                 <span className="lg:hidden text-graphite">unit · </span>
-                <Unit run={run} />
+                {run ? <Unit run={run} /> : <NotRunYet />}
               </div>
               {OBJECTIVES.map((o) => (
                 <div key={o.id} className="font-mono text-xs">
                   <span className="lg:hidden text-graphite">{o.label} · </span>
-                  <Verdict v={run?.objectives[o.id]?.verdict} />
+                  {run ? <Verdict v={run.objectives[o.id]?.verdict} /> : <NotRunYet />}
                 </div>
               ))}
             </div>
