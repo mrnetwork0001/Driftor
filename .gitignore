@@ -11,3 +11,5 @@ kane-traces/latest.ndjson
 kane-traces/runs/*/evidence/
 # Acceptance checks derived from the agent's task: Kane's assurance store and designed tests.
 .driftor
+# Which objectives the last gate selected (runtime state).
+kane-traces/selection.json
