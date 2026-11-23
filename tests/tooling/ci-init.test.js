@@ -7,6 +7,7 @@
  */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { spawnSync } = require("node:child_process");
 const os = require("node:os");
 const path = require("node:path");
 const { afterEach, describe, it } = require("node:test");
@@ -80,7 +81,18 @@ describe("driftor init", () => {
 
     assert.equal(read("package.json").scripts["driftor:check"], "node .driftor/driftor.js gate --dry-run");
     assert.equal(read(".driftor/package.json").type, "commonjs");
-    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
+    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
+
+    // The copied runtime must load on its own: every module it requires was copied too.
+    for (const args of [["--list"], ["--hook"], ["gate", "--dry-run"]]) {
+      const r = spawnSync(process.execPath, [path.join(dir, ".driftor", "driftor.js"), ...args], {
+        cwd: dir,
+        input: "{}",
+        encoding: "utf8",
+        env: { ...process.env, DRIFTOR_HOOK: "", DRIFTOR_ROOT: "" },
+      });
+      assert.doesNotMatch(`${r.stdout}${r.stderr}`, /Cannot find module|MODULE_NOT_FOUND/, `driftor.js ${args.join(" ")}`);
+    }
 
     // Running it again adds nothing twice.
     assert.equal(silently(() => init(["--dir", dir])), 0);
@@ -99,5 +111,28 @@ describe("driftor init", () => {
   it("refuses a repo that is neither Next.js nor Vite", () => {
     setup({ name: "plain" });
     assert.equal(silently(() => init(["--dir", dir])), 1);
+  });
+});
+
+describe("acceptance: designed tests with empty variables", () => {
+  const { emptyVariables } = require("../../lib/acceptance");
+  let dir;
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("names the variables a test uses that have no value, and nothing else", () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "driftor-accept-"));
+    fs.mkdirSync(path.join(dir, ".testmuai", "tests"), { recursive: true });
+    fs.mkdirSync(path.join(dir, ".testmuai", "variables"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, ".testmuai", "variables", "assurance.json"),
+      JSON.stringify({ key_to_revoke: { value: "" }, app_url: { value: "http://localhost:3002" } })
+    );
+    fs.writeFileSync(
+      path.join(dir, ".testmuai", "tests", "a_test.md"),
+      "---\nassurance:\n  id: t-1\n---\n# A\n\n## Step 1\n\nAt {{app_url}}, store the first key name as 'first_key'. Revoke {{key_to_revoke}}, then assert {{first_key}} is listed and {{smart.random_string_8}} and {{global.thing}} are ignored.\n"
+    );
+    fs.writeFileSync(path.join(dir, ".testmuai", "tests", "b_test.md"), "# B\n\nOpen http://localhost:3002/app and verify the heading.\n");
+    assert.deepEqual(emptyVariables(dir, ".testmuai/tests/a_test.md"), ["key_to_revoke"]);
+    assert.deepEqual(emptyVariables(dir, ".testmuai/tests/b_test.md"), []);
   });
 });

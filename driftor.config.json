@@ -59,7 +59,8 @@
     "max": 2,
     "viewport": "1920x1080",
     "startPath": "/app",
-    "budgetSeconds": 480
+    "budgetSeconds": 480,
+    "startingData": "After a reset the workspace has 2 Production API keys: KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\". Active keys reads \"2 Keys\", Available quota reads \"$4,500.00\" and Action status reads \"SYSTEM_READY\"."
   },
   "objectives": [
     {
