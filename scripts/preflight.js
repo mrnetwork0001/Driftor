@@ -62,9 +62,9 @@ async function main() {
   if (agents.length) pass(`Heal agent: ${agents.join(", ")}`);
   else warn("No coding agent found (claude or gemini). The gate works; --heal needs one.");
 
-  const target = fs.readFileSync(path.join(ROOT, "app", "app", "MaintenanceNotice.tsx"), "utf8");
-  if (target.includes('className="pointer-events-none fixed inset-0 z-50"')) pass("Demo app source is healthy");
-  else warn("Demo app has the injected regression. `npm run driftor:reset` restores it.");
+  const live = require(path.join(ROOT, "lib", "regressions.js")).active();
+  if (!live.length) pass("Demo app source is healthy");
+  else warn(`Demo app has an injected regression (${live.join(", ")}). \`npm run driftor:reset\` restores it.`);
 
   console.log(ok ? "\nReady: npm run driftor:gate" : "\nFix the items above first.");
   process.exit(ok ? 0 : 1);
