@@ -7,3 +7,5 @@ node_modules
 kane-traces/latest.ndjson
 .data
 .next-build
+# Acceptance checks derived from the agent's task: Kane's assurance store and designed tests.
+.driftor

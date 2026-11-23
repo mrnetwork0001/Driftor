@@ -20,6 +20,7 @@
     "driftor:reset": "node driftor.js --reset",
     "driftor:watch": "node driftor.js --watch",
     "driftor:preflight": "node scripts/preflight.js",
+    "driftor:accept": "node driftor.js --accept",
     "agent": "DRIFTOR_HOOK=1 claude",
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"
