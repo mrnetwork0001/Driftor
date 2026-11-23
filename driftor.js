@@ -11,17 +11,21 @@
  *   node driftor.js --inject [bug]  # ship a bug-zoo regression into the demo app (default: overlay)
  *   node driftor.js --list          # list the bug-zoo regressions
  *   node driftor.js --reset         # revert every injected regression (demo housekeeping, not a heal)
+ *   node driftor.js --accept "<task>" [--no-gate] [--fresh]
+ *                                   # what the hook does with a task: Kane designs acceptance tests
+ *                                   # from it (lib/acceptance.js) and runs them next to the gate
  *
  * The hook is opt-in: it only acts when DRIFTOR_HOOK=1 is set for the Claude
  * Code session (`npm run agent`), so ordinary sessions in this repo never
  * spend Kane credits.
  */
 
-const { spawnSync } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { parseNdjson, extractFindings, buildHealPrompt } = require("./lib/heal");
+const acceptance = require("./lib/acceptance");
 // The bug zoo only exists in the Driftor repo; other projects don't need it.
 const zooModule = () => {
   try {
@@ -66,6 +70,24 @@ function runGate({ capture = false, env = {} } = {}) {
   });
   return { passed: res.status === 0, output: capture ? `${res.stdout || ""}${res.stderr || ""}` : "" };
 }
+
+/** runGate({ capture: true }) without blocking, so the hook can design derived checks meanwhile. */
+function runGateAsync({ env = {} } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(__dirname, "driftor_test.js"), ...passthrough()], {
+      cwd: ROOT,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...env },
+    });
+    let output = "";
+    child.stdout.on("data", (c) => (output += c));
+    child.stderr.on("data", (c) => (output += c));
+    child.on("close", (code) => resolve({ passed: code === 0, output }));
+  });
+}
+
+const RUNS_DIR = path.join(TRACE_DIR, "runs");
+const listRuns = () => (fs.existsSync(RUNS_DIR) ? fs.readdirSync(RUNS_DIR).sort() : []);
 
 function runUnitTests() {
   const res = spawnSync("npx", ["vitest", "run", "--reporter=dot"], { cwd: ROOT, stdio: "inherit" });
@@ -229,6 +251,7 @@ function readStdin() {
   }
 }
 
+/** The app's base URL if it is running (the explicit URL, or the first port serving the marker), else null. */
 async function appIsUp() {
   const explicit = process.env.DRIFTOR_URL || CONFIG.url;
   const { ports = [3000, 3010], marker } = CONFIG.discover || {};
@@ -236,12 +259,74 @@ async function appIsUp() {
   for (const url of candidates) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
-      if (explicit || !marker || (await res.text()).includes(marker)) return true;
+      if (explicit || !marker || (await res.text()).includes(marker)) return url.replace(/\/$/, "");
     } catch {
       /* keep scanning */
     }
   }
-  return false;
+  return null;
+}
+
+/* ── acceptance checks derived from the task (lib/acceptance.js) ──────────── */
+
+const ACCEPT = acceptance.acceptanceConfig(CONFIG);
+
+/**
+ * Starts designing the derived checks (no browser: Kane's assurance commands),
+ * so it can overlap the standing gate. Resolves to a manifest, or null when
+ * there is nothing to derive (disabled, or no task found).
+ */
+function startDerive({ requests, appUrl, fresh = false, log }) {
+  if (!ACCEPT.enabled || !requests.length || !appUrl) return Promise.resolve(null);
+  const deadline = Date.now() + ACCEPT.budgetSeconds * 1000;
+  const changes = ACCEPT.includeDiff ? acceptance.changeSummary(ROOT, CONFIG.watch || ["app"], ACCEPT) : null;
+  return acceptance
+    .deriveChecks({ root: ROOT, requests, changes, appUrl, appName: CONFIG.app, cfg: ACCEPT, deadline, log, fresh })
+    .then((manifest) => ({ manifest, deadline }))
+    .catch((err) => ({ manifest: { status: "error", error: err.message, tests: [], requests }, deadline }));
+}
+
+/** Runs the designed checks after the gate (Kane's window size is global) and archives them in the gate's run folder. */
+async function finishDerived(derived, { appUrl, runDir, log }) {
+  if (!derived) return null;
+  const { manifest, deadline } = derived;
+  const startedAt = new Date().toISOString();
+  let run = { results: [], browserCredits: null };
+  if (manifest.status === "designed") {
+    try {
+      run = await acceptance.runChecks({
+        root: ROOT,
+        manifest,
+        appUrl,
+        reset: CONFIG.reset,
+        cfg: ACCEPT,
+        headless: passthrough().includes("--headless"),
+        // The design's budget, but never less than enough to run what was designed.
+        deadline: Math.max(deadline, Date.now() + manifest.tests.length * 150 * 1000),
+        log,
+      });
+    } catch (err) {
+      manifest.warnings = [...(manifest.warnings || []), `running the checks failed: ${err.message}`];
+    }
+  }
+  const block = acceptance.archive(runDir, { manifest, results: run.results, browserCredits: run.browserCredits, startedAt, cfg: ACCEPT });
+  return { manifest, results: run.results, block, runDir };
+}
+
+/** One line on what the derived checks did, for systemMessage / the terminal. */
+function describeDerived(d) {
+  if (!d) return "";
+  const { manifest, results } = d;
+  if (manifest.status !== "designed") {
+    return ` Driftor couldn't derive acceptance checks from the task (${manifest.error || manifest.status}).`;
+  }
+  const passed = results.filter((r) => r.verdict === "passed").length;
+  const noVerdict = results.filter((r) => r.verdict === "no-verdict").length;
+  return (
+    ` Kane also designed ${results.length} acceptance test${results.length === 1 ? "" : "s"} from the task (unreviewed) and ${passed} passed` +
+    (noVerdict ? `; ${noVerdict} reached no verdict` : "") +
+    "."
+  );
 }
 
 /**
@@ -260,7 +345,8 @@ async function cmdHook() {
   const hash = fingerprint();
   if (hash === state.verified) return; // nothing changed since Kane last passed
 
-  if (!(await appIsUp())) {
+  const appUrl = await appIsUp();
+  if (!appUrl) {
     out({ systemMessage: "Driftor: no running app found, so Kane didn't check this change. Start it with `npm run dev`." });
     return;
   }
@@ -273,9 +359,13 @@ async function cmdHook() {
   const selectEnv = changed ? { DRIFTOR_CHANGED_FILES: JSON.stringify(changed) } : {};
 
   process.stderr.write("Driftor: source changed — running the Kane gate in real Chrome…\n");
-  const { passed, output } = runGate({ capture: true, env: { DRIFTOR_TRIGGER: "claude-stop-hook", ...selectEnv } });
+  // The task the agent was given, from the session transcript (lib/acceptance.js).
+  const requests = ACCEPT.enabled ? acceptance.requestsFromTranscript(input.transcript_path, ACCEPT) : [];
+  const { passed: gatePassed, output, derived } = await gateWithTask({ requests, appUrl, trigger: "claude-stop-hook", env: selectEnv });
   fs.mkdirSync(TRACE_DIR, { recursive: true });
   fs.appendFileSync(path.join(TRACE_DIR, "hook.log"), `\n# ${new Date().toISOString()} session ${session}\n${output}`);
+  const derivedFailed = derived ? derived.results.filter((r) => r.verdict === "failed") : [];
+  const passed = gatePassed && !derivedFailed.length;
 
   if (passed) {
     state.verified = fingerprint();
@@ -293,8 +383,8 @@ async function cmdHook() {
     }
     out({
       systemMessage: skipped.length
-        ? `Driftor: Kane verified the ${ran} objective(s) this change affects in real Chrome. ✓ Skipped as unaffected: ${skipped.join(", ")}.`
-        : `Driftor: Kane verified all ${ran} objectives in real Chrome. ✓`,
+        ? `Driftor: Kane verified the ${ran} objective(s) this change affects in real Chrome. ✓ Skipped as unaffected: ${skipped.join(", ")}.${describeDerived(derived)}`
+        : `Driftor: Kane verified all ${ran} objectives in real Chrome. ✓${describeDerived(derived)}`,
     });
     return;
   }
@@ -311,17 +401,112 @@ async function cmdHook() {
   state.attempts[session] = attempt;
   saveState(state);
 
-  const findings = readFindings();
-  const evidence = findings.length
-    ? buildHealPrompt(findings, { app: CONFIG.app })
-    : `Kane CLI's gate failed but reported no failing step. Output:\n${output.slice(-3000)}`;
+  const parts = [];
+  if (!gatePassed) {
+    const findings = readFindings();
+    parts.push(
+      findings.length
+        ? buildHealPrompt(findings, { app: CONFIG.app })
+        : `Kane CLI's gate failed but reported no failing step. Output:\n${output.slice(-3000)}`
+    );
+  }
+  if (derivedFailed.length) parts.push(acceptance.buildAcceptancePrompt(derived.results, { app: CONFIG.app, viewport: ACCEPT.viewport }));
   out({
     decision: "block",
     reason:
       `Driftor ran your change through Kane CLI in real Chrome and it failed (attempt ${attempt} of ${MAX_ATTEMPTS}).\n\n` +
-      `${evidence}\n\n` +
+      `${parts.join("\n\n")}\n\n` +
       "Fix it, then end your turn. Driftor re-runs Kane automatically when you stop.",
   });
+}
+
+/**
+ * The standing gate plus the checks derived from the task. Kane designs the
+ * derived tests while the gate runs (design needs no browser), then runs them
+ * after it, and records them in the gate's run folder.
+ */
+async function gateWithTask({ requests, appUrl, trigger, env = {}, noGate = false, fresh = false, log }) {
+  log = log || ((m) => process.stderr.write(`Driftor: ${m}\n`));
+  const before = new Set(listRuns());
+  const startedAt = new Date().toISOString();
+  if (ACCEPT.enabled && requests.length) log(`deriving acceptance checks from the task (${requests.length} request${requests.length === 1 ? "" : "s"} from the session)…`);
+  const derivePromise = startDerive({ requests, appUrl, fresh, log });
+  const gate = noGate ? { passed: true, output: "" } : await runGateAsync({ env: { DRIFTOR_TRIGGER: trigger, ...env } });
+  const pending = await derivePromise;
+  if (!pending) return { ...gate, derived: null };
+
+  let runDir = listRuns().filter((d) => !before.has(d)).pop();
+  if (!runDir || noGate) {
+    runDir = startedAt.replace(/[:.]/g, "-");
+    fs.mkdirSync(path.join(RUNS_DIR, runDir), { recursive: true });
+    fs.writeFileSync(
+      path.join(RUNS_DIR, runDir, "run.json"),
+      JSON.stringify({ startedAt, passed: gate.passed, trigger, regression: [], unit: null, objectives: {}, standingGate: noGate ? "skipped" : "no run folder" }, null, 2)
+    );
+  }
+  const derived = await finishDerived(pending, { appUrl, runDir: path.join(RUNS_DIR, runDir), log });
+  return { ...gate, derived, runDir: path.join("kane-traces", "runs", runDir) };
+}
+
+/* ── --accept: the hook's derived checks for a task you type ──────────────── */
+
+async function cmdAccept(task) {
+  line();
+  console.log(" 🧾 DRIFTOR — ACCEPTANCE CHECKS DERIVED FROM THE TASK");
+  line();
+  if (!task) {
+    console.error(' ✗ Give the task in quotes: node driftor.js --accept "Add a Revoke button to each API key"');
+    process.exit(1);
+  }
+  if (!ACCEPT.enabled && process.env.DRIFTOR_ACCEPT !== "0") {
+    Object.assign(ACCEPT, { enabled: true }); // --accept is itself the opt-in
+  }
+  if (!ACCEPT.enabled) {
+    console.error(" ✗ Derived checks are switched off (DRIFTOR_ACCEPT=0).");
+    process.exit(1);
+  }
+  const appUrl = await appIsUp();
+  if (!appUrl) {
+    console.error(" ✗ No running app found. Start it (`npm run dev`), or set DRIFTOR_URL.");
+    process.exit(1);
+  }
+  const noGate = args.includes("--no-gate");
+  console.log(` ✓ Target: ${appUrl}`);
+  console.log(` ✓ Task: ${task}`);
+  console.log(` ✓ Kane designs at most ${ACCEPT.max} test(s); they run at ${ACCEPT.viewport}${noGate ? "" : ", after the standing objectives"}.`);
+  console.log(" ⚠ Review: the designed tests run unreviewed (labelled so in run.json); nothing is promoted to trusted.\n");
+  const t0 = Date.now();
+  const { passed: gatePassed, output, derived, runDir } = await gateWithTask({
+    requests: [task],
+    appUrl,
+    trigger: "accept-cli",
+    noGate,
+    fresh: args.includes("--fresh"),
+    log: (m) => console.log(` · ${m}`),
+  });
+  if (!noGate) console.log(`\n Standing objectives: ${gatePassed ? "✓ passed" : "✗ FAILED"} (full output: npm run driftor:gate)`);
+  if (!noGate && !gatePassed) console.log(output.split("\n").filter((l) => /✗|→/.test(l)).map((l) => `   ${l.trim()}`).join("\n"));
+  const results = derived?.results || [];
+  if (derived?.manifest) {
+    const m = derived.manifest;
+    console.log(`\n Derived from the task (${m.reused ? "reused earlier design" : `${m.useCases?.length || 0} use-case(s)`}, store ${path.relative(ROOT, m.dir || "")}):`);
+    if (m.status !== "designed") console.log(`   ✗ no checks: ${m.error || m.status}`);
+    for (const r of results) {
+      console.log(`   ${r.verdict === "passed" ? "✓" : r.verdict === "failed" ? "✗" : "?"} ${r.title} — ${r.verdict}`);
+      if (r.failure?.message && r.verdict !== "passed") console.log(`     ${String(r.failure.message).split("\n").join("\n     ")}`);
+    }
+    for (const p of m.pauses || []) for (const q of p.questions) console.log(`   ↪ Kane asked "${q.text}" → ${q.answered ?? "unanswered"}`);
+    const c = derived.block.credits;
+    console.log(`   credits: assurance ${c.assurance ?? "?"}, browser runs ${c.browser ?? "?"}`);
+  }
+  const failedDerived = results.filter((r) => r.verdict === "failed");
+  if (failedDerived.length) {
+    console.log("\n 📄 What the agent would be told (Stop hook block reason, derived part):\n");
+    console.log(acceptance.buildAcceptancePrompt(results, { app: CONFIG.app, viewport: ACCEPT.viewport }).split("\n").map((l) => `   │ ${l}`).join("\n"));
+  }
+  line();
+  console.log(` Archived: ${runDir || "(nothing ran)"} · ${Math.round((Date.now() - t0) / 1000)} s`);
+  process.exit(gatePassed && !failedDerived.length ? 0 : 1);
 }
 
 /* ── watch ────────────────────────────────────────────────────────────────── */
@@ -356,6 +541,7 @@ const after = (f) => {
 };
 
 if (args.includes("--hook")) cmdHook();
+else if (args.includes("--accept")) cmdAccept(after("--accept"));
 else if (args.includes("--inject")) cmdInject(after("--inject"));
 else if (args.includes("--list")) cmdList();
 else if (args.includes("--heal")) cmdHeal();

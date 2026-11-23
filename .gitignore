@@ -9,3 +9,5 @@ kane-traces/latest.ndjson
 .next-build
 # Packs scripts/ci.js copies in for a verdict (large; CI uploads them as an artifact).
 kane-traces/runs/*/evidence/
+# Acceptance checks derived from the agent's task: Kane's assurance store and designed tests.
+.driftor

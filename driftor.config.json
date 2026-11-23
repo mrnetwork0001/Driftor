@@ -54,6 +54,13 @@
     "mode": "cdp",
     "isolateParam": "run"
   },
+  "acceptance": {
+    "enabled": true,
+    "max": 2,
+    "viewport": "1920x1080",
+    "startPath": "/app",
+    "budgetSeconds": 480
+  },
   "objectives": [
     {
       "id": "desktop-occlusion-gate",

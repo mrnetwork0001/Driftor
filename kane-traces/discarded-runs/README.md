@@ -24,3 +24,10 @@ injected. We removed the layer, and the `z-index` bug that depended on it.
 The desktop verdicts for `overlay` and `pointer-events` here were correct; the
 whole zoo was re-run anyway so every published verdict comes from the same
 version of the app and runner.
+
+**3. The app was being edited mid-run.** `2026-11-23T22-51-57-575Z` was the first
+real run of task-derived acceptance checks ("add a Revoke button…"). While it ran,
+the dashboard source in the checkout being served was mid-merge, and Kane's console
+shows "Merge conflict marker encountered". Both derived tests failed, which is the
+right verdict (the app has no Revoke button), but a run against half-merged source
+isn't evidence of anything, so it's kept here and the check was re-run on clean code.
