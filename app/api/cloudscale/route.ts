@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { load } from "@/lib/cloudscale-store";
+import { load, runIdFrom } from "@/lib/cloudscale-store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return NextResponse.json(load());
+/** `?run=<id>` reads that run's own state; without it, the shared state. */
+export async function GET(request: Request) {
+  const id = runIdFrom(request);
+  if ("error" in id) return NextResponse.json({ error: id.error }, { status: 400 });
+  return NextResponse.json(load(id.run));
 }
