@@ -1,0 +1,51 @@
+{
+  "startedAt": "2026-11-23T23:29:09.253Z",
+  "finishedAt": "2026-11-23T23:30:30.800Z",
+  "wallMs": 81546,
+  "passed": true,
+  "trigger": "cli",
+  "regression": [],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  27 passed (27)"
+  },
+  "objectives": {
+    "narrow-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "800x1000",
+      "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)",
+      "durationMs": 77961,
+      "attempts": 1,
+      "mode": "sequential"
+    }
+  },
+  "selection": {
+    "mode": "files",
+    "changed": [
+      "app/api/cloudscale/topup/route.ts"
+    ],
+    "selected": [
+      "narrow-viewport-gate"
+    ],
+    "skipped": [
+      {
+        "id": "desktop-occlusion-gate",
+        "reason": "no changed file is shared or covered by it (changed: app/api/cloudscale/topup/route.ts)"
+      }
+    ],
+    "files": [
+      {
+        "file": "app/api/cloudscale/topup/route.ts",
+        "effect": "covers",
+        "objectives": [
+          "narrow-viewport-gate"
+        ]
+      }
+    ]
+  },
+  "execution": {
+    "mode": "sequential",
+    "kaneWallMs": 80298
+  }
+}

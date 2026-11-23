@@ -1,0 +1,47 @@
+{
+  "startedAt": "2026-11-23T23:24:43.619Z",
+  "finishedAt": "2026-11-23T23:26:53.533Z",
+  "wallMs": 129913,
+  "passed": false,
+  "trigger": "cli",
+  "regression": [
+    "pointer-events"
+  ],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  27 passed (27)"
+  },
+  "objectives": {
+    "desktop-occlusion-gate": {
+      "verdict": "failed",
+      "viewport": "1920x1080",
+      "title": "Desktop: primary CTA receives the click (UC-01, UC-02)",
+      "durationMs": 57996,
+      "attempts": 1,
+      "mode": "sequential"
+    },
+    "narrow-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "800x1000",
+      "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)",
+      "durationMs": 67863,
+      "attempts": 1,
+      "mode": "sequential"
+    }
+  },
+  "selection": {
+    "mode": "all",
+    "changed": null,
+    "selected": [
+      "desktop-occlusion-gate",
+      "narrow-viewport-gate"
+    ],
+    "skipped": [],
+    "files": []
+  },
+  "execution": {
+    "mode": "sequential",
+    "kaneWallMs": 129135
+  }
+}
