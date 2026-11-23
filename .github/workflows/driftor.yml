@@ -1,0 +1,147 @@
+# Driftor gate on every pull request: build and start the app, run the Kane CLI
+# objectives in driftor.config.json in headless Chrome, judge the sealed evidence
+# pack against policies/driftor-gate.yaml, and keep one sticky PR comment with
+# the failing steps. Required secrets: docs/ci.md.
+name: Driftor gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: driftor-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_PORT: "3000"
+      DRIFTOR_URL: http://localhost:3000
+      KANE_CLI_USER_AGENT: driftor-ci
+      HAS_KANE_CREDENTIALS: ${{ secrets.KANE_USERNAME != '' && secrets.KANE_ACCESS_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit and tooling tests (no Kane)
+        run: |
+          npx vitest run
+          npm run test:tooling
+          npx kane-cli evidence lint-policy policies/driftor-gate.yaml
+
+      - name: Skip without Kane credentials
+        if: env.HAS_KANE_CREDENTIALS != 'true'
+        run: |
+          echo "::notice::KANE_USERNAME / KANE_ACCESS_KEY are not available to this run (fork PR or unset secrets), so the Kane gate was skipped. See docs/ci.md."
+
+      - name: Set up Chrome
+        id: chrome
+        if: env.HAS_KANE_CREDENTIALS == 'true'
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Cache Kane's runner
+        if: env.HAS_KANE_CREDENTIALS == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/v16-runner
+          key: kane-runner-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Build and start the app
+        if: env.HAS_KANE_CREDENTIALS == 'true'
+        run: |
+          npm run build
+          nohup npx next start -p "$APP_PORT" > app.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS "$DRIFTOR_URL" > /dev/null && exit 0
+            sleep 1
+          done
+          echo "::error::The app did not answer on $DRIFTOR_URL within 60s"
+          cat app.log
+          exit 1
+
+      - name: Log Kane in
+        if: env.HAS_KANE_CREDENTIALS == 'true'
+        env:
+          KANE_USERNAME: ${{ secrets.KANE_USERNAME }}
+          KANE_ACCESS_KEY: ${{ secrets.KANE_ACCESS_KEY }}
+          KANE_PROJECT_ID: ${{ vars.KANE_PROJECT_ID }}
+        run: |
+          args=(--username "$KANE_USERNAME" --access-key "$KANE_ACCESS_KEY")
+          if [ -n "$KANE_PROJECT_ID" ]; then args+=(--project-id "$KANE_PROJECT_ID"); fi
+          npx kane-cli login "${args[@]}" < /dev/null
+          npx kane-cli whoami | grep -i -v token | head -n 5
+
+      - name: Run the Kane gate (headless Chrome)
+        id: gate
+        if: env.HAS_KANE_CREDENTIALS == 'true'
+        continue-on-error: true
+        env:
+          KANE_CLI_CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          KANE_CLI_CDP_TIMEOUT_MS: "60000"
+          DRIFTOR_TRIGGER: ci
+        run: node driftor.js gate --headless
+
+      - name: Judge the evidence pack
+        id: verdict
+        if: always() && env.HAS_KANE_CREDENTIALS == 'true'
+        continue-on-error: true
+        run: |
+          run_dir="$(node scripts/ci.js latest)" || { echo "::error::The gate archived no run"; exit 2; }
+          echo "run_dir=$run_dir" >> "$GITHUB_OUTPUT"
+          npx kane-cli evidence lint-policy policies/driftor-gate.yaml
+          node scripts/ci.js verdict "$run_dir" --policy policies/driftor-gate.yaml
+
+      - name: Render the PR comment
+        if: always() && steps.verdict.outputs.run_dir != ''
+        run: |
+          node scripts/ci.js comment "${{ steps.verdict.outputs.run_dir }}" --out driftor-comment.md
+          cat driftor-comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update the sticky PR comment
+        if: always() && github.event_name == 'pull_request' && steps.verdict.outputs.run_dir != ''
+        continue-on-error: true # fork PRs get a read-only token
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const body = fs.readFileSync("driftor-comment.md", "utf8");
+            const marker = "<!-- driftor-gate -->";
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const mine = comments.find((c) => c.user?.type === "Bot" && c.body?.includes(marker));
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+
+      - name: Upload the run folder
+        if: always() && steps.verdict.outputs.run_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: driftor-run-${{ github.run_id }}
+          path: |
+            ${{ steps.verdict.outputs.run_dir }}
+            kane-traces/hook.log
+            app.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail the check if Kane or the policy failed
+        if: always() && env.HAS_KANE_CREDENTIALS == 'true'
+        run: |
+          echo "gate: ${{ steps.gate.outcome }}, verdict: ${{ steps.verdict.outcome }}"
+          test "${{ steps.gate.outcome }}" = "success" && test "${{ steps.verdict.outcome }}" = "success"

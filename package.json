@@ -5,12 +5,16 @@
   "description": "A real-browser gate for AI-written UI changes: Kane CLI catches clicks that never land, a coding agent fixes them, Kane re-verifies.",
   "license": "Apache-2.0",
   "author": "mrnetwork",
+  "bin": {
+    "driftor": "driftor.js"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run",
+    "test:tooling": "node --test tests/tooling/*.test.js",
     "driftor": "node driftor.js",
     "driftor:gate": "node driftor.js gate",
     "driftor:test": "node driftor_test.js",
@@ -20,6 +24,8 @@
     "driftor:reset": "node driftor.js --reset",
     "driftor:watch": "node driftor.js --watch",
     "driftor:preflight": "node scripts/preflight.js",
+    "driftor:check": "node driftor.js gate --dry-run",
+    "driftor:init": "node driftor.js init",
     "agent": "DRIFTOR_HOOK=1 claude",
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"

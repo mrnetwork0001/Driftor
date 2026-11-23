@@ -3,6 +3,8 @@
  * Driftor - real-browser gate for AI-written UI changes
  * ---------------------------------------------------------------------------
  *   node driftor.js                 # run the Kane gate; exits 1 if any objective fails
+ *   node driftor.js gate --dry-run  # check config, kane-cli and app discovery; no browser, no credits
+ *   node driftor.js init            # set Driftor up in another Next.js or Vite repo (scripts/init.js)
  *   node driftor.js --hook          # Claude Code Stop hook: gate the agent's edits, feed failures back
  *   node driftor.js --heal          # send the failing Kane evidence to a coding agent, then re-verify
  *   node driftor.js --watch         # re-run the gate when watched source changes
@@ -30,17 +32,33 @@ const zooModule = () => {
   }
 };
 
-const ROOT = __dirname;
-const TRACE_DIR = path.join(ROOT, "kane-traces");
-const STATE_FILE = path.join(ROOT, ".data", "driftor-hook.json");
+// `driftor init` sets Driftor up in another repo; it runs before any config exists.
+if (process.argv[2] === "init") {
+  process.exit(require("./scripts/init").main(process.argv.slice(3)));
+}
+
+// The project root holds driftor.config.json: this folder in the Driftor repo, or the
+// parent of the .driftor/ folder `driftor init` copies the runtime into.
+const ROOT = resolveRoot();
+function resolveRoot() {
+  if (process.env.DRIFTOR_ROOT) return path.resolve(process.env.DRIFTOR_ROOT);
+  const has = (dir) => fs.existsSync(path.join(dir, "driftor.config.json"));
+  return [__dirname, path.dirname(__dirname)].find(has) || process.cwd();
+}
+if (!fs.existsSync(path.join(ROOT, "driftor.config.json"))) {
+  console.error(` ✗ No driftor.config.json in ${ROOT}. Run \`npx github:mrnetwork0001/Driftor init\` to create one.`);
+  process.exit(1);
+}
 const CONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, "driftor.config.json"), "utf8"));
+const TRACE_DIR = path.join(ROOT, CONFIG.traceDir || "kane-traces");
+const STATE_FILE = path.join(ROOT, ".data", "driftor-hook.json");
 const MAX_ATTEMPTS = CONFIG.maxHealAttempts || 3;
 
 const line = (c = "=") => console.log(c.repeat(78));
-const passthrough = () => process.argv.slice(2).filter((a) => a === "--headless");
+const passthrough = () => process.argv.slice(2).filter((a) => a === "--headless" || a === "--dry-run");
 
 function runGate({ capture = false, env = {} } = {}) {
-  const res = spawnSync(process.execPath, [path.join(ROOT, "driftor_test.js"), ...passthrough()], {
+  const res = spawnSync(process.execPath, [path.join(__dirname, "driftor_test.js"), ...passthrough()], {
     cwd: ROOT,
     stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
     encoding: "utf8",

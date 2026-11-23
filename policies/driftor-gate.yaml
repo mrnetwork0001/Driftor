@@ -1,0 +1,39 @@
+# Driftor CI gate: the policy `kane-cli evidence verdict` judges the gate's
+# merged evidence pack against. Every metric here is listed by
+# `kane-cli policy metrics-list --agent`; lint with
+# `kane-cli evidence lint-policy policies/driftor-gate.yaml`.
+policy: driftor-gate
+requires:
+  catalog: kane-cli
+  version: ">=1"
+gates:
+  - id: objectives-ran
+    metric: totals.tests
+    min: 1
+    severity: blocking
+    message: The pack holds no tests, so Kane never judged the app.
+  - id: no-failed-objectives
+    metric: totals.failed
+    equals: 0
+    severity: blocking
+    message: A user flow failed in real Chrome.
+  - id: no-broken-objectives
+    metric: totals.broken
+    equals: 0
+    severity: blocking
+    message: Kane could not evaluate an objective's checks.
+  - id: no-failed-steps
+    metric: steps.failed
+    equals: 0
+    severity: blocking
+    message: A step failed in real Chrome.
+  - id: every-objective-asserts
+    metric: metrics.tests_without_checks
+    equals: 0
+    severity: blocking
+    message: An objective made no assertion, so passing it proves nothing.
+  - id: no-heals
+    metric: metrics.heal.healed_tests
+    max: 0
+    severity: warning
+    message: Kane had to heal a step; check whether the UI moved.

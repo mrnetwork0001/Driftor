@@ -7,3 +7,5 @@ node_modules
 kane-traces/latest.ndjson
 .data
 .next-build
+# Packs scripts/ci.js copies in for a verdict (large; CI uploads them as an artifact).
+kane-traces/runs/*/evidence/
