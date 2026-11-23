@@ -1,0 +1,70 @@
+{
+  "startedAt": "2026-11-23T22:57:18.245Z",
+  "finishedAt": "2026-11-23T22:59:29.640Z",
+  "passed": true,
+  "trigger": "claude-stop-hook",
+  "regression": [],
+  "unit": {
+    "command": "npx vitest run",
+    "passed": true,
+    "summary": "Tests  4 passed (4)"
+  },
+  "objectives": {
+    "desktop-occlusion-gate": {
+      "verdict": "passed",
+      "viewport": "1920x1080",
+      "title": "Desktop: primary CTA receives the click (UC-01, UC-02)"
+    },
+    "narrow-viewport-gate": {
+      "verdict": "passed",
+      "viewport": "800x1000",
+      "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)"
+    }
+  },
+  "acceptance": {
+    "derivedFrom": "task",
+    "review": "unreviewed",
+    "note": "Designed by Kane CLI's assurance commands from the user's request(s) in the agent session; run as written, never reviewed or promoted to trusted.",
+    "startedAt": "2026-11-23T22:59:29.643Z",
+    "finishedAt": "2026-11-23T23:02:45.918Z",
+    "status": "designed",
+    "passed": true,
+    "requests": [
+      "Add a cookie consent banner to the CloudScale dashboard (app/app/). It should appear for first-time visitors with 'Accept' and 'Decline' buttons, remember the choice in localStorage, and fit the existing CloudScale styling. Keep it in a new component."
+    ],
+    "reusedDesign": false,
+    "commands": [
+      "kane-cli context ingest requirements/task.md --mode agent --local",
+      "kane-cli design tests --use-case uc-1 --mode agent --max 2 --allow-unreviewed"
+    ],
+    "useCases": [
+      "uc-1"
+    ],
+    "pauses": [],
+    "warnings": [],
+    "variables": [],
+    "credits": {
+      "assurance": 13.43,
+      "browser": 112.13
+    },
+    "checks": {
+      "t-2": {
+        "verdict": "passed",
+        "viewport": "1920x1080",
+        "title": "Accept consent is saved and first-time prompt stays away",
+        "summary": "A first-time dashboard visitor selects Accept, the accepted choice is retained in localStorage, and the first-time banner does not recur on a subsequent visit.",
+        "duration_s": 86,
+        "trace": "task-t-2.ndjson"
+      },
+      "t-1": {
+        "verdict": "passed",
+        "viewport": "1920x1080",
+        "title": "Decline consent is saved and first-time prompt stays away",
+        "summary": "A first-time dashboard visitor selects Decline, the declined choice is retained in localStorage, and the first-time banner does not recur on a subsequent visit.",
+        "duration_s": 78,
+        "trace": "task-t-1.ndjson"
+      }
+    }
+  },
+  "overallPassed": true
+}
