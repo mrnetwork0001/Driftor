@@ -265,16 +265,37 @@ async function cmdHook() {
     return;
   }
 
+  // Run only the objectives the change can affect: diff against the files Kane last passed on.
+  // No stored baseline (first run, or state from an older Driftor) → no list → every objective runs.
+  const { snapshot, diffSnapshots } = require("./lib/select");
+  const files = snapshot(ROOT, CONFIG);
+  const changed = state.files ? diffSnapshots(state.files, files) : null;
+  const selectEnv = changed ? { DRIFTOR_CHANGED_FILES: JSON.stringify(changed) } : {};
+
   process.stderr.write("Driftor: source changed — running the Kane gate in real Chrome…\n");
-  const { passed, output } = runGate({ capture: true, env: { DRIFTOR_TRIGGER: "claude-stop-hook" } });
+  const { passed, output } = runGate({ capture: true, env: { DRIFTOR_TRIGGER: "claude-stop-hook", ...selectEnv } });
   fs.mkdirSync(TRACE_DIR, { recursive: true });
   fs.appendFileSync(path.join(TRACE_DIR, "hook.log"), `\n# ${new Date().toISOString()} session ${session}\n${output}`);
 
   if (passed) {
     state.verified = fingerprint();
+    state.files = files; // taken before the gate ran, so it's exactly what Kane checked
     delete state.attempts[session];
     saveState(state);
-    out({ systemMessage: `Driftor: Kane verified all ${CONFIG.objectives.length} objectives in real Chrome. ✓` });
+    let ran = CONFIG.objectives.length;
+    let skipped = [];
+    try {
+      const sel = JSON.parse(fs.readFileSync(path.join(TRACE_DIR, "selection.json"), "utf8"));
+      ran = sel.selected.length;
+      skipped = sel.skipped.map((s) => s.id);
+    } catch {
+      /* older runner: assume everything ran */
+    }
+    out({
+      systemMessage: skipped.length
+        ? `Driftor: Kane verified the ${ran} objective(s) this change affects in real Chrome. ✓ Skipped as unaffected: ${skipped.join(", ")}.`
+        : `Driftor: Kane verified all ${ran} objectives in real Chrome. ✓`,
+    });
     return;
   }
 

@@ -16,16 +16,70 @@
     "lib"
   ],
   "maxHealAttempts": 3,
+  "select": {
+    "shared": [
+      "app/layout.tsx",
+      "app/globals.css",
+      "app/app/layout.tsx",
+      "app/app/MaintenanceNotice.tsx",
+      "lib/cloudscale*",
+      "middleware.*",
+      "public/**",
+      "tailwind.config.*",
+      "postcss.config.*",
+      "next.config.*",
+      "package.json",
+      "package-lock.json",
+      "tsconfig.json",
+      "driftor.config.json"
+    ],
+    "ignore": [
+      "app/(site)/**",
+      "app/api/traces/**",
+      "components/**",
+      "lib/heal.js",
+      "lib/regressions.js",
+      "lib/select.js",
+      "tests/unit/**",
+      "kane-traces/**",
+      "specs/**",
+      "scripts/**",
+      "**/*.md",
+      "LICENSE",
+      "**/*.tsbuildinfo"
+    ]
+  },
+  "parallel": {
+    "enabled": false,
+    "mode": "cdp",
+    "isolateParam": "run"
+  },
   "objectives": [
     {
       "id": "desktop-occlusion-gate",
       "viewport": "1920x1080",
+      "covers": [
+        "app/app/CloudScaleDashboard.tsx",
+        "app/app/CookieConsent.tsx",
+        "app/app/page.tsx",
+        "app/api/cloudscale/route.ts",
+        "app/api/cloudscale/reset/**",
+        "app/api/cloudscale/keys/**"
+      ],
       "title": "Desktop: primary CTA receives the click (UC-01, UC-02)",
       "objective": "Open {{url}}/app. Verify the heading contains \"CloudScale AI Inference Gateway\" and Active keys reads \"2 Keys\". Click the button \"Generate Production API Key\" with a mouse click, as a user would. Do not use the keyboard, and do not wait for or work around anything that covers the button; if the click does not reach it, the check fails. Verify Action status displays \"KEY_GENERATED_HEALTHY\" and Active keys reads \"3 Keys\"."
     },
     {
       "id": "narrow-viewport-gate",
       "viewport": "800x1000",
+      "covers": [
+        "app/app/CloudScaleDashboard.tsx",
+        "app/app/CookieConsent.tsx",
+        "app/app/page.tsx",
+        "app/api/cloudscale/route.ts",
+        "app/api/cloudscale/reset/**",
+        "app/api/cloudscale/topup/**"
+      ],
       "title": "Narrow screen, mobile layout: quota top-up stays reachable (UC-03)",
       "objective": "Open {{url}}/app. Verify Available quota reads \"$4,500.00\". Click \"+ Top Up Quota ($250)\" with a mouse click, as a user would. Do not use the keyboard, and do not wait for or work around anything that covers it; if the click does not reach it, the check fails. Verify Available quota reads \"$4,750.00\" and Action status displays \"QUOTA_TOPUP_SUCCESS\"."
     }

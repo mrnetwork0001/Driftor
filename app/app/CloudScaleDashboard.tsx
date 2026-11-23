@@ -45,9 +45,22 @@ function ago(iso: string, now: number) {
   return `${Math.round(s / 86400)} d ago`;
 }
 
+/**
+ * `/app?run=<id>` scopes this page to its own server-side state, so Kane
+ * objectives running in parallel don't share one workspace. Without it the
+ * page uses the shared state, as before.
+ */
+function runId(): string | null {
+  if (typeof window === "undefined") return null;
+  const run = new URLSearchParams(window.location.search).get("run");
+  return run && /^[A-Za-z0-9_-]{1,64}$/.test(run) ? run : null;
+}
+
 /** Workspace state changes on every write, so never answer from the browser's HTTP cache. */
 async function call<T>(path: string, method: "GET" | "POST" = "GET"): Promise<T> {
-  const res = await fetch(path, { method, cache: "no-store" });
+  const run = runId();
+  const url = run ? `${path}?run=${encodeURIComponent(run)}` : path;
+  const res = await fetch(url, { method, cache: "no-store" });
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
   return (await res.json()) as T;
 }
@@ -75,7 +88,12 @@ export default function CloudScaleDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [runScope, setRunScope] = useState<string | null>(null);
   const now = useNow();
+
+  useEffect(() => {
+    setRunScope(runId());
+  }, []);
 
   // Re-reads the whole workspace. Called on load and after every write, so the
   // dashboard shows what the server holds now, not what this tab last saw.
@@ -181,7 +199,7 @@ export default function CloudScaleDashboard() {
             <dt className="text-cs-sub">Plan</dt>
             <dd>Team · prepaid</dd>
             <dt className="text-cs-sub">State</dt>
-            <dd className="font-mono">.data/cloudscale.json</dd>
+            <dd className="font-mono break-all">{runScope ? `.data/cloudscale-runs/${runScope}.json` : ".data/cloudscale.json"}</dd>
           </dl>
         </aside>
 
