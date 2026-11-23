@@ -8,6 +8,7 @@
  *   node driftor_test.js --only <id>        # run one objective
  *   node driftor_test.js --url <url>        # gate an app at this URL
  *   node driftor_test.js --config <file>    # use another config file
+ *   node driftor_test.js --dry-run          # check config, kane-cli and the app; run nothing
  *
  * Before each objective it resets the app's state (config.reset, if set) and
  * sets Kane's browser window to the objective's viewport, restoring the
@@ -19,14 +20,18 @@ const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = __dirname;
-const TRACE_DIR = path.join(ROOT, "kane-traces");
+// The project root holds driftor.config.json: this folder in the Driftor repo, or the
+// parent of the .driftor/ folder `driftor init` copies the runtime into.
+const ROOT = process.env.DRIFTOR_ROOT
+  ? path.resolve(process.env.DRIFTOR_ROOT)
+  : [__dirname, path.dirname(__dirname)].find((d) => fs.existsSync(path.join(d, "driftor.config.json"))) || process.cwd();
 const argv = process.argv.slice(2);
 const flag = (name) => {
   const i = argv.indexOf(name);
   return i !== -1 ? argv[i + 1] : null;
 };
 const HEADLESS = argv.includes("--headless");
+const DRY_RUN = argv.includes("--dry-run");
 const ONLY = flag("--only");
 
 /* ── config ───────────────────────────────────────────────────────────────── */
@@ -46,6 +51,7 @@ function loadConfig() {
 }
 
 const CONFIG = loadConfig();
+const TRACE_DIR = path.join(ROOT, CONFIG.traceDir || "kane-traces");
 const line = (c = "=") => console.log(c.repeat(78));
 
 function findKane() {
@@ -236,6 +242,24 @@ async function main() {
   const tests = ONLY ? CONFIG.objectives.filter((t) => t.id === ONLY) : CONFIG.objectives;
   if (!tests.length) {
     console.error(` ✗ Unknown objective "${ONLY}". Available: ${CONFIG.objectives.map((t) => t.id).join(", ")}`);
+    process.exit(1);
+  }
+
+  // Objectives `driftor init` wrote are placeholders until someone edits them.
+  const placeholders = tests.filter((t) => t.placeholder);
+  if (DRY_RUN) {
+    console.log(` ✓ kane-cli: ${KANE.startsWith(ROOT) ? path.relative(ROOT, KANE) : KANE}`);
+    for (const t of tests) {
+      console.log(` ${t.placeholder ? "!" : "✓"} ${t.id} · ${t.viewport || "default window"} · ${t.title || ""}`);
+      console.log(`   ${t.objective.replaceAll("{{url}}", appUrl)}`);
+    }
+    console.log(`\n Reset: ${CONFIG.reset ? `${appUrl}${CONFIG.reset}` : "none"} · Unit: ${CONFIG.unit || "none"} · Traces: ${path.relative(ROOT, TRACE_DIR)}/`);
+    if (placeholders.length) console.log(` ! ${placeholders.length} placeholder objective(s): edit them and remove "placeholder": true before a real run.`);
+    console.log(" ✓ Dry run: config, kane-cli and the app are in place. Kane was not started.");
+    process.exit(0);
+  }
+  if (placeholders.length) {
+    console.error(` ✗ Placeholder objectives: ${placeholders.map((t) => t.id).join(", ")}. Edit them in driftor.config.json and remove "placeholder": true.`);
     process.exit(1);
   }
 
