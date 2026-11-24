@@ -5,9 +5,9 @@
  *   node driftor.js init [--dir <repo>] [--port <n>] [--force]
  *
  * It writes, in the target repo:
- *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance,card,guard}.js   the runtime the hook runs
+ *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance,card,guard,redgreen}.js   the runtime the hooks run
  *   driftor.config.json        placeholder objectives to edit (kept if it exists, unless --force)
- *   .claude/settings.json      the Stop + SessionStart hooks, merged into existing hooks; they only act with DRIFTOR_HOOK=1
+ *   .claude/settings.json      the Stop, SessionStart and UserPromptSubmit hooks, merged into existing hooks; they only act with DRIFTOR_HOOK=1
  *   package.json scripts       driftor:gate, driftor:check, driftor:heal, driftor:watch, driftor:agent
  *   .gitignore                 Driftor's local state
  * The bug zoo, the reset endpoint and the unit command are optional and left off.
@@ -18,8 +18,10 @@ const path = require("path");
 
 const PKG_ROOT = path.join(__dirname, "..");
 // Everything driftor.js and driftor_test.js require at runtime (lib/regressions.js is optional).
-const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/card.js", "lib/guard.js"];
+const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/card.js", "lib/guard.js", "lib/redgreen.js"];
 const HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --hook';
+// Red→green: designs the task's tests and runs them before the agent writes code (needs `acceptance` in the config).
+const PROMPT_HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --prompt-hook';
 const IGNORE = [
   "kane-traces/latest.ndjson",
   "kane-traces/hook.log",
@@ -27,6 +29,7 @@ const IGNORE = [
   ".data/driftor-hook.json",
   ".data/driftor-guard.json",
   ".driftor/acceptance/",
+  ".driftor/redgreen/",
   ".testmuai/evidence/",
 ];
 
@@ -108,19 +111,25 @@ function starterConfig({ name, framework, port, basePath = "/", watch }) {
 }
 
 /**
- * Adds Driftor's Stop hook (the gate) and SessionStart hook (the guard's starting
- * point) to .claude/settings.json without touching anything else.
+ * Adds Driftor's hooks to .claude/settings.json without touching anything else:
+ * Stop (the gate), SessionStart (the guard's starting point) and
+ * UserPromptSubmit (the red run before the change).
  */
 function mergeHook(file) {
   const settings = fs.existsSync(file) ? readJson(file) : {};
   settings.hooks = settings.hooks || {};
-  const ours = (group) => (group.hooks || []).some((h) => typeof h.command === "string" && h.command.includes("driftor.js") && h.command.includes("--hook"));
   const added = [];
-  for (const [event, timeout] of [["Stop", 900], ["SessionStart", 30]]) {
-    const list = (settings.hooks[event] = settings.hooks[event] || []);
-    if (list.some(ours)) continue;
-    list.push({ hooks: [{ type: "command", command: HOOK_COMMAND, timeout }] });
-    added.push(event);
+  for (const [event, flag, command, timeout] of [
+    ["Stop", /--hook\b/, HOOK_COMMAND, 900],
+    ["SessionStart", /--hook\b/, HOOK_COMMAND, 30],
+    ["UserPromptSubmit", /--prompt-hook\b/, PROMPT_HOOK_COMMAND, 900],
+  ]) {
+    const groups = (settings.hooks[event] = settings.hooks[event] || []);
+    const present = groups.some((group) => (group.hooks || []).some((h) => typeof h.command === "string" && h.command.includes("driftor.js") && flag.test(h.command)));
+    if (!present) {
+      groups.push({ hooks: [{ type: "command", command, timeout }] });
+      added.push(event);
+    }
   }
   writeJson(file, settings);
   return added.length ? `added (${added.join(", ")})` : "already there";
@@ -199,7 +208,7 @@ function main(argv = []) {
     log(`✓ driftor.config.json written with 2 placeholder objectives (watching ${found.watch.join(", ")})`);
   }
 
-  log(`✓ Driftor hooks ${mergeHook(path.join(dir, ".claude", "settings.json"))} in .claude/settings.json (acts only with DRIFTOR_HOOK=1)`);
+  log(`✓ Driftor hooks ${mergeHook(path.join(dir, ".claude", "settings.json"))} in .claude/settings.json (they act only with DRIFTOR_HOOK=1; the red→green run also needs "acceptance" in driftor.config.json)`);
   const scripts = addScripts(path.join(dir, "package.json"));
   log(scripts.length ? `✓ npm scripts added: ${scripts.join(", ")}` : "• npm scripts already present");
   const ignores = addIgnores(path.join(dir, ".gitignore"));

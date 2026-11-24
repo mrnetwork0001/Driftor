@@ -20,6 +20,10 @@
  *   node driftor.js --accept "<task>" [--no-gate] [--fresh]
  *                                   # what the hook does with a task: Kane designs acceptance tests
  *                                   # from it (lib/acceptance.js) and runs them next to the gate
+ *   node driftor.js --prompt-hook   # Claude Code UserPromptSubmit hook: Kane designs the task's tests
+ *                                   # and runs them before any code is written (they should fail: red)
+ *   node driftor.js --redgreen --before "<task>"   # the same by hand: design + red run, saved as a baseline
+ *   node driftor.js --redgreen --after [--no-gate] # the same tests again after the change: red→green receipt
  *
  * The hook is opt-in: it only acts when DRIFTOR_HOOK=1 is set for the Claude
  * Code session (`npm run agent`), so ordinary sessions in this repo never
@@ -33,6 +37,7 @@ const path = require("path");
 const { parseNdjson, extractFindings, buildHealPrompt } = require("./lib/heal");
 const acceptance = require("./lib/acceptance");
 const guard = require("./lib/guard");
+const redgreen = require("./lib/redgreen");
 // The bug zoo only exists in the Driftor repo; other projects don't need it.
 const zooModule = () => {
   try {
@@ -508,6 +513,14 @@ async function stopHook({ session, requests, verdict }) {
   }
 
   const hash = fingerprint();
+  // Red→green: the tests Kane designed from this session's task and ran red before any code (--prompt-hook).
+  const baseline = ACCEPT.enabled && ACCEPT.redGreen ? redgreen.loadBaseline(ROOT, session) : null;
+  const open = baseline && baseline.status === "open" ? baseline : null;
+  if (open && hash === open.fingerprint) {
+    // Nothing changed since the red run (a question, or a plan): re-running would only be red→red.
+    out({ systemMessage: "Driftor: the source hasn't changed since Kane's red run for this task, so the red→green tests weren't re-run; they run when you stop after a change." });
+    return;
+  }
   if (hash === state.verified) return; // nothing changed since Kane last passed
 
   const appUrl = await appIsUp();
@@ -524,7 +537,8 @@ async function stopHook({ session, requests, verdict }) {
   const selectEnv = changed ? { DRIFTOR_CHANGED_FILES: JSON.stringify(changed) } : {};
 
   process.stderr.write("Driftor: source changed — running the Kane gate in real Chrome…\n");
-  const { passed: gatePassed, output, derived } = await gateWithTask({ requests, appUrl, trigger: "claude-stop-hook", env: selectEnv });
+  // With a red→green baseline, the same tests run again instead of designing new ones from the transcript.
+  const { passed: gatePassed, output, derived, receipt, runDir } = await gateWithTask({ requests: open ? [] : requests, appUrl, trigger: "claude-stop-hook", env: selectEnv, baseline: open });
   fs.mkdirSync(TRACE_DIR, { recursive: true });
   fs.appendFileSync(path.join(TRACE_DIR, "hook.log"), `\n# ${new Date().toISOString()} session ${session}\n${output}`);
   const derivedFailed = derived ? derived.results.filter((r) => r.verdict === "failed") : [];
@@ -535,6 +549,8 @@ async function stopHook({ session, requests, verdict }) {
     state.files = files; // taken before the gate ran, so it's exactly what Kane checked
     delete state.attempts[session];
     saveState(state);
+    if (receipt) redgreen.updateBaseline(ROOT, session, { status: "closed", closedAt: new Date().toISOString(), run: runDir, verdict: receipt.summary.verdict });
+    const derivedLine = receipt ? ` ${redgreen.describeReceipt(receipt)} Receipt: ${runDir}/redgreen.json` : describeDerived(derived);
     let ran = CONFIG.objectives.length;
     let skipped = [];
     try {
@@ -546,8 +562,8 @@ async function stopHook({ session, requests, verdict }) {
     }
     out({
       systemMessage: skipped.length
-        ? `Driftor: Kane verified the ${ran} objective(s) this change affects in real Chrome. ✓ Skipped as unaffected: ${skipped.join(", ")}.${describeDerived(derived)}`
-        : `Driftor: Kane verified all ${ran} objectives in real Chrome. ✓${describeDerived(derived)}`,
+        ? `Driftor: Kane verified the ${ran} objective(s) this change affects in real Chrome. ✓ Skipped as unaffected: ${skipped.join(", ")}.${derivedLine}`
+        : `Driftor: Kane verified all ${ran} objectives in real Chrome. ✓${derivedLine}`,
     });
     return;
   }
@@ -577,6 +593,13 @@ async function stopHook({ session, requests, verdict }) {
       .map(([r, card]) => `Screenshot of what the user saw (${r.title || r.id}): ${card}. Read it.`);
     parts.push([acceptance.buildAcceptancePrompt(derived.results, { app: CONFIG.app, viewport: ACCEPT.viewport }), ...shots].join("\n"));
   }
+  if (receipt && derivedFailed.length) {
+    parts.push(
+      "Red→green so far (the same tests Kane designed from your task and ran before you changed anything):\n" +
+        redgreen.formatReceipt(receipt).map((l) => `  ${acceptance.scrubSource(l)}`).join("\n") +
+        "\nA red→red test is still not done; a green→red test passed before your change and fails now."
+    );
+  }
   out({
     decision: "block",
     reason:
@@ -591,12 +614,19 @@ async function stopHook({ session, requests, verdict }) {
  * derived tests while the gate runs (design needs no browser), then runs them
  * after it, and records them in the gate's run folder.
  */
-async function gateWithTask({ requests, appUrl, trigger, env = {}, noGate = false, fresh = false, log }) {
+async function gateWithTask({ requests, appUrl, trigger, env = {}, noGate = false, fresh = false, log, baseline = null }) {
   log = log || ((m) => process.stderr.write(`Driftor: ${m}\n`));
   const before = new Set(listRuns());
   const startedAt = new Date().toISOString();
-  if (ACCEPT.enabled && requests.length) log(`deriving acceptance checks from the task (${requests.length} request${requests.length === 1 ? "" : "s"} from the session)…`);
-  const derivePromise = startDerive({ requests, appUrl, fresh, log });
+  let derivePromise;
+  if (baseline) {
+    // Red→green: replay the tests Kane designed (and ran red) before the change. No re-design.
+    log(`re-running the ${baseline.before.length} test(s) Kane designed from the task before the change (red→green)…`);
+    derivePromise = Promise.resolve({ manifest: redgreen.manifestFor(ROOT, baseline), deadline: Date.now() + ACCEPT.budgetSeconds * 1000 });
+  } else {
+    if (ACCEPT.enabled && requests.length) log(`deriving acceptance checks from the task (${requests.length} request${requests.length === 1 ? "" : "s"} from the session)…`);
+    derivePromise = startDerive({ requests, appUrl, fresh, log });
+  }
   const gate = noGate ? { passed: true, output: "" } : await runGateAsync({ env: { DRIFTOR_TRIGGER: trigger, ...env } });
   const pending = await derivePromise;
   if (!pending) return { ...gate, derived: null };
@@ -621,7 +651,14 @@ async function gateWithTask({ requests, appUrl, trigger, env = {}, noGate = fals
       /* no card, same verdict */
     }
   }
-  return { ...gate, derived, runDir: path.join("kane-traces", "runs", runDir) };
+  let receipt = null;
+  if (baseline) {
+    receipt = redgreen.buildReceipt(baseline, derived.results);
+    receipt.run = path.join("kane-traces", "runs", runDir);
+    receipt.credits.after = derived.block.credits.browser;
+    redgreen.archiveReceipt(ROOT, path.join(RUNS_DIR, runDir), baseline, receipt);
+  }
+  return { ...gate, derived, receipt, runDir: path.join("kane-traces", "runs", runDir) };
 }
 
 /* ── --accept: the hook's derived checks for a task you type ──────────────── */
@@ -701,6 +738,174 @@ function cmdCard(dir, objective) {
   process.exit(results.some((r) => !r.card) ? 1 : 0);
 }
 
+/* ── red→green: the task's tests run before the change, then after it ─────── */
+
+/**
+ * The before side: Kane designs acceptance tests from the task (no diff: no code
+ * has been written yet) and runs them on the app as it is now. Saves the result
+ * as the session's baseline. The app must not change meanwhile, so this runs
+ * synchronously, before the agent starts.
+ */
+async function redBaseline({ task, session, appUrl, fresh = false, log }) {
+  const deadline = Date.now() + ACCEPT.budgetSeconds * 1000;
+  const startFingerprint = fingerprint();
+  const manifest = await acceptance.deriveChecks({ root: ROOT, requests: [task], changes: null, appUrl, appName: CONFIG.app, cfg: ACCEPT, deadline, log, fresh });
+  if (manifest.status !== "designed") return { manifest, baseline: null };
+  const run = await acceptance.runChecks({
+    root: ROOT,
+    manifest,
+    appUrl,
+    reset: CONFIG.reset,
+    cfg: ACCEPT,
+    headless: passthrough().includes("--headless"),
+    deadline: Math.max(deadline, Date.now() + manifest.tests.length * 150 * 1000),
+    log,
+  });
+  const baseline = redgreen.saveBaseline(ROOT, {
+    session,
+    task: acceptance.redact(task),
+    manifest,
+    results: run.results,
+    fingerprint: startFingerprint,
+    appUrl,
+    viewport: ACCEPT.viewport,
+    credits: { assurance: manifest.reused ? 0 : Math.round(manifest.assuranceCredits * 100) / 100, browser: run.browserCredits },
+  });
+  if (fingerprint() !== startFingerprint) {
+    // Someone edited the source during the red run: its verdicts may not describe "before".
+    redgreen.updateBaseline(ROOT, session, { warning: "the watched source changed while the red run was in progress" });
+    baseline.warning = "the watched source changed while the red run was in progress";
+  }
+  return { manifest, baseline };
+}
+
+/**
+ * Claude Code UserPromptSubmit hook. Before the agent sees the prompt, Kane
+ * designs the task's acceptance tests and runs them on the current app; the
+ * agent gets them as acceptance criteria that currently fail. The Stop hook
+ * re-runs the same tests and writes the red→green receipt.
+ */
+async function cmdPromptHook() {
+  const input = readStdin();
+  if (process.env.DRIFTOR_HOOK !== "1") return; // opt-in, like --hook
+  if (!ACCEPT.enabled || !ACCEPT.redGreen) return;
+  const out = (obj) => process.stdout.write(JSON.stringify(obj));
+  const context = (additionalContext, systemMessage) =>
+    out({ ...(systemMessage ? { systemMessage } : {}), hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext } });
+  const session = input.session_id || "manual";
+  const prompt = String(input.prompt || "").trim();
+  // Slash commands and one-word replies ("yes", "go on") are not a task to design tests for.
+  if (!prompt || prompt.startsWith("/") || prompt.length < 15) return;
+
+  const existing = redgreen.loadBaseline(ROOT, session);
+  if (existing && existing.status === "open") {
+    // A follow-up in the same task: keep the baseline (and its red run) instead of re-designing.
+    context(
+      `Driftor (red→green): the acceptance tests Kane designed from the first request in this session still stand (${existing.before.length} test(s); they failed before any change). They run again when you end your turn. This follow-up was not turned into new tests.`
+    );
+    return;
+  }
+  const appUrl = await appIsUp();
+  if (!appUrl) {
+    out({ systemMessage: "Driftor: no running app found, so Kane didn't run the task's tests before the change (no red→green baseline). Start it with `npm run dev`." });
+    return;
+  }
+  const logFile = path.join(TRACE_DIR, "hook.log");
+  fs.mkdirSync(TRACE_DIR, { recursive: true });
+  const log = (m) => {
+    process.stderr.write(`Driftor: ${m}\n`);
+    fs.appendFileSync(logFile, `${m}\n`);
+  };
+  fs.appendFileSync(logFile, `\n# ${new Date().toISOString()} session ${session} (prompt hook, red run)\n`);
+  try {
+    const { manifest, baseline } = await redBaseline({ task: prompt, session, appUrl, log });
+    if (!baseline) {
+      out({ systemMessage: `Driftor: Kane designed no acceptance tests from this request (${manifest.error || manifest.status}), so there is no red→green baseline.` });
+      return;
+    }
+    context(redgreen.buildBeforeContext(baseline, { scrub: acceptance.scrubSource, app: CONFIG.app }), `Driftor: ${redgreen.describeBefore(baseline)}`);
+  } catch (err) {
+    out({ systemMessage: `Driftor: the red run before the change failed (${err.message}); no red→green baseline.` });
+  }
+}
+
+/** `--redgreen --before "<task>"` / `--redgreen --after`: the two hooks' red→green halves, by hand. */
+async function cmdRedGreen() {
+  const phase = args.includes("--before") ? "before" : args.includes("--after") ? "after" : null;
+  const session = after("--session") || "cli";
+  line();
+  console.log(` 🟥→🟩 DRIFTOR — RED→GREEN PROOF (${phase || "?"} the change)`);
+  line();
+  if (!phase) {
+    console.error(' ✗ Say which side: --redgreen --before "<task>" (design + red run) or --redgreen --after (same tests again).');
+    process.exit(1);
+  }
+  if (process.env.DRIFTOR_ACCEPT === "0") {
+    console.error(" ✗ Derived checks are switched off (DRIFTOR_ACCEPT=0).");
+    process.exit(1);
+  }
+  Object.assign(ACCEPT, { enabled: true, redGreen: true }); // the command is itself the opt-in
+  const appUrl = await appIsUp();
+  if (!appUrl) {
+    console.error(" ✗ No running app found. Start it (`npm run dev`), or set DRIFTOR_URL.");
+    process.exit(1);
+  }
+  console.log(` ✓ Target: ${appUrl}`);
+  const t0 = Date.now();
+  const log = (m) => console.log(` · ${m}`);
+
+  if (phase === "before") {
+    const task = after("--before");
+    if (!task) {
+      console.error(' ✗ Give the task in quotes: node driftor.js --redgreen --before "Add a Revoke button to each API key"');
+      process.exit(1);
+    }
+    console.log(` ✓ Task: ${task}`);
+    console.log(` ✓ Kane designs at most ${ACCEPT.max} test(s) and runs them on the app as it is now (${ACCEPT.viewport}). They should fail.\n`);
+    const { manifest, baseline } = await redBaseline({ task, session, appUrl, fresh: args.includes("--fresh"), log });
+    if (!baseline) {
+      console.log(`\n ✗ No tests to run: ${manifest.error || manifest.status}`);
+      process.exit(1);
+    }
+    console.log("");
+    for (const r of baseline.before) {
+      const mark = r.redGreen === "red" ? "🟥 red  " : r.redGreen === "green" ? "🟩 green" : "?  none ";
+      console.log(` ${mark} ${r.title}`);
+      if (r.failure?.message) console.log(`          ${String(r.failure.message).split("\n")[0].slice(0, 200)}`);
+      if (r.redGreen === "green") console.log("          already passes: kept as a regression check, won't count as proof");
+    }
+    if (baseline.warning) console.log(`\n ⚠ ${baseline.warning}`);
+    console.log(`\n ${redgreen.describeBefore(baseline)}`);
+    console.log(`   credits: design ${baseline.credits.assurance ?? "?"}, red run ${baseline.credits.browser ?? "?"}`);
+    console.log("\n 📄 What the agent is told before it starts (UserPromptSubmit additionalContext):\n");
+    console.log(redgreen.buildBeforeContext(baseline, { scrub: acceptance.scrubSource, app: CONFIG.app }).split("\n").map((l) => `   │ ${l}`).join("\n"));
+    line();
+    console.log(` Baseline: ${path.relative(ROOT, redgreen.baselineDir(ROOT, session))}/baseline.json · ${Math.round((Date.now() - t0) / 1000)} s`);
+    console.log(" Next: make the change, then `npm run driftor:green` (node driftor.js --redgreen --after).");
+    return;
+  }
+
+  const baseline = redgreen.loadBaseline(ROOT, session);
+  if (!baseline) {
+    console.error(` ✗ No red→green baseline for session "${session}". Run --redgreen --before "<task>" first.`);
+    process.exit(1);
+  }
+  const noGate = args.includes("--no-gate");
+  console.log(` ✓ Task: ${baseline.task}`);
+  console.log(` ✓ Red run: ${baseline.ranAt} (${baseline.before.length} test(s)); replaying the same test files${noGate ? "" : " after the standing objectives"}.\n`);
+  const { passed: gatePassed, receipt, runDir } = await gateWithTask({ requests: [], appUrl, trigger: "redgreen-cli", noGate, log, baseline });
+  if (!noGate) console.log(`\n Standing objectives: ${gatePassed ? "✓ passed" : "✗ FAILED"} (full output: npm run driftor:gate)`);
+  console.log("\n Receipt:");
+  for (const l of redgreen.formatReceipt(receipt)) console.log(`   ${l}`);
+  console.log(`\n ${redgreen.describeReceipt(receipt)}`);
+  console.log(`   credits: design ${receipt.credits.design ?? "?"}, red run ${receipt.credits.before ?? "?"}, green run ${receipt.credits.after ?? "?"}`);
+  const ok = gatePassed && !receipt.rows.some((r) => r.blocks);
+  if (ok) redgreen.updateBaseline(ROOT, session, { status: "closed", closedAt: new Date().toISOString(), run: runDir, verdict: receipt.summary.verdict });
+  line();
+  console.log(` Archived: ${runDir}/redgreen.json · ${Math.round((Date.now() - t0) / 1000)} s`);
+  process.exit(ok ? 0 : 1);
+}
+
 /* ── watch ────────────────────────────────────────────────────────────────── */
 
 function cmdWatch() {
@@ -732,8 +937,10 @@ const after = (f) => {
   return v && !v.startsWith("--") ? v : undefined;
 };
 
-if (args.includes("--hook")) cmdHook();
+if (args.includes("--prompt-hook")) cmdPromptHook();
+else if (args.includes("--hook")) cmdHook();
 else if (args.includes("--guard")) cmdGuard();
+else if (args.includes("--redgreen")) cmdRedGreen();
 else if (args.includes("--accept")) cmdAccept(after("--accept"));
 else if (args.includes("--card")) cmdCard(after("--card"), after("--objective"));
 else if (args.includes("--inject")) cmdInject(after("--inject"));
