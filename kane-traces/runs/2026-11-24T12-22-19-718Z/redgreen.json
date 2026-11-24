@@ -1,0 +1,75 @@
+{
+  "kind": "driftor-redgreen-receipt",
+  "task": "Add a Revoke button to each API key that removes it from the list and keeps it removed after reload",
+  "session": "cli",
+  "designedAt": "2026-11-24T12:18:31.870Z",
+  "beforeAt": "2026-11-24T12:21:48.944Z",
+  "afterAt": "2026-11-24T12:25:36.121Z",
+  "review": "unreviewed: designed by Kane CLI from the task, never reviewed or promoted to trusted",
+  "summary": {
+    "tests": 2,
+    "proven": 1,
+    "stillFailing": 1,
+    "regressed": 0,
+    "regressionChecks": 0,
+    "noProof": 0,
+    "verdict": "failing"
+  },
+  "rows": [
+    {
+      "id": "t-2",
+      "title": "KEY-001 is removed from the CloudScale Production API-key list",
+      "before": "failed",
+      "after": "failed",
+      "label": "red→red",
+      "outcome": "still-failing",
+      "blocks": true,
+      "beforeFailure": "Final verification failed: \"the Production API-key list contains exactly two keys, KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\", with each listed key having its own Revoke control.\"",
+      "afterFailure": "Final verification failed: \"KEY-001 is absent from the list\""
+    },
+    {
+      "id": "t-1",
+      "title": "KEY-002 remains revoked after CloudScale reload",
+      "before": "failed",
+      "after": "passed",
+      "label": "red→green",
+      "outcome": "proven",
+      "blocks": false,
+      "beforeFailure": "Final verification failed: \"the Production API-key list contains exactly two keys, KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\", with each listed key having its own Revoke control\""
+    }
+  ],
+  "credits": {
+    "design": 13.94,
+    "before": 61.04,
+    "after": 100.56
+  },
+  "run": "kane-traces/runs/2026-11-24T12-22-19-718Z",
+  "before": [
+    {
+      "id": "t-2",
+      "title": "KEY-001 is removed from the CloudScale Production API-key list",
+      "summary": "Revoke KEY-001 in the reset workspace and check that it is removed from the list while KEY-002 remains listed.",
+      "verdict": "failed",
+      "redGreen": "red",
+      "failure": {
+        "message": "Final verification failed: \"the Production API-key list contains exactly two keys, KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\", with each listed key having its own Revoke control.\"",
+        "step_index": 1
+      },
+      "duration_s": 53,
+      "trace": "redgreen-before/task-t-2.ndjson"
+    },
+    {
+      "id": "t-1",
+      "title": "KEY-002 remains revoked after CloudScale reload",
+      "summary": "Revoke KEY-002 in the reset workspace and check that it stays excluded after reload while KEY-001 remains listed.",
+      "verdict": "failed",
+      "redGreen": "red",
+      "failure": {
+        "message": "Final verification failed: \"the Production API-key list contains exactly two keys, KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\", with each listed key having its own Revoke control\"",
+        "step_index": 1
+      },
+      "duration_s": 60,
+      "trace": "redgreen-before/task-t-1.ndjson"
+    }
+  ]
+}

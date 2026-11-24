@@ -1,0 +1,80 @@
+{
+  "startedAt": "2026-11-24T12:26:27.142Z",
+  "passed": true,
+  "trigger": "redgreen-cli",
+  "regression": [],
+  "unit": null,
+  "objectives": {},
+  "standingGate": "skipped",
+  "acceptance": {
+    "derivedFrom": "task",
+    "review": "unreviewed",
+    "note": "Designed by Kane CLI's assurance commands from the user's request(s) in the agent session; run as written, never reviewed or promoted to trusted.",
+    "startedAt": "2026-11-24T12:26:27.143Z",
+    "finishedAt": "2026-11-24T12:27:34.958Z",
+    "status": "designed",
+    "passed": true,
+    "requests": [
+      "Add a Revoke button to each API key that removes it from the list and keeps it removed after reload"
+    ],
+    "reusedDesign": true,
+    "commands": [
+      "kane-cli context ingest requirements/task.md --mode agent --local",
+      "kane-cli design tests --use-case uc-1 --mode agent --max 2 --allow-unreviewed"
+    ],
+    "useCases": [
+      "uc-1"
+    ],
+    "pauses": [],
+    "warnings": [],
+    "variables": [],
+    "credits": {
+      "assurance": 0,
+      "browser": 17.56
+    },
+    "checks": {
+      "t-2": {
+        "verdict": "passed",
+        "viewport": "1920x1080",
+        "title": "KEY-001 is removed from the CloudScale Production API-key list",
+        "summary": "Revoke KEY-001 in the reset workspace and check that it is removed from the list while KEY-002 remains listed.",
+        "duration_s": 33,
+        "trace": "task-t-2.ndjson"
+      },
+      "t-1": {
+        "verdict": "passed",
+        "viewport": "1920x1080",
+        "title": "KEY-002 remains revoked after CloudScale reload",
+        "summary": "Revoke KEY-002 in the reset workspace and check that it stays excluded after reload while KEY-001 remains listed.",
+        "duration_s": 13,
+        "trace": "task-t-1.ndjson"
+      }
+    }
+  },
+  "overallPassed": true,
+  "redGreen": {
+    "tests": 2,
+    "proven": 2,
+    "stillFailing": 0,
+    "regressed": 0,
+    "regressionChecks": 0,
+    "noProof": 0,
+    "verdict": "proven",
+    "task": "Add a Revoke button to each API key that removes it from the list and keeps it removed after reload",
+    "receipt": "redgreen.json",
+    "rows": [
+      {
+        "id": "t-2",
+        "title": "KEY-001 is removed from the CloudScale Production API-key list",
+        "label": "red→green",
+        "outcome": "proven"
+      },
+      {
+        "id": "t-1",
+        "title": "KEY-002 remains revoked after CloudScale reload",
+        "label": "red→green",
+        "outcome": "proven"
+      }
+    ]
+  }
+}
