@@ -223,6 +223,14 @@ describe("guard: starting point and reporting", () => {
     assert.equal(check({ baseline }).verdict, "block");
   });
 
+  it("with a baseline, an edit the agent commits during the session is still seen", () => {
+    const baseline = guard.recordBaseline(dir);
+    edit("tests/unit/cloudscale.test.tsx", "expect(", "expect.soft(");
+    sh("commit", "-qam", "agent commits its edit");
+    assert.equal(check({ baseline }).verdict, "block");
+    assert.equal(check().verdict, "allow"); // vs the new HEAD it's invisible: the fallback's limit
+  });
+
   it("uses quoted labels from Kane-designed tests, but not ones the test expects to be gone", () => {
     edit(DASH, "Production API keys</h2>", 'Production API keys</h2>\n                  <p className="text-xs">Rotate keys every 90 days</p>');
     sh("commit", "-qam", "copy");
@@ -248,6 +256,13 @@ describe("guard: starting point and reporting", () => {
     assert.equal(saved.verdict, "block");
     assert.equal(saved.session, "s1");
     assert.match(fs.readFileSync(path.join(dir, "kane-traces", "guard.log"), "utf8"), /BLOCK/);
+  });
+
+  it("the recorded demo blocks the four cheats and lets the real fix through", () => {
+    const r = spawnSync(process.execPath, [path.join(REPO, "scripts", "guard-demo.js")], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.equal((r.stdout.match(/✗ BLOCK/g) || []).length, 4);
+    assert.match(r.stdout, /✓ ALLOW {2}The real fix/);
   });
 
   it("is off with guard.enabled false, and skips outside git", () => {

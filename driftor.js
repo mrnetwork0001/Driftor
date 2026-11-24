@@ -386,17 +386,20 @@ function checkGuard({ session, requests, trigger }) {
     .createHash("sha1")
     .update(JSON.stringify([result.verdict, result.violations, result.inspected.map((f) => [f, result.dirty && result.dirty[f]])]))
     .digest("hex");
-  if ((result.verdict === "block" || result.inspected.length) && g.last[session] !== digest) {
+  // Every block is archived; an allow when there was something to judge (once per distinct
+  // change) or when it clears an earlier block.
+  const prev = g.last[session] || {};
+  if (result.verdict === "block" || prev.verdict === "block" || (result.inspected.length && prev.digest !== digest)) {
     result.archived = path.relative(ROOT, guard.archiveDecision(TRACE_DIR, result, { session, trigger }));
-    g.last = { [session]: digest };
+    g.last = { [session]: { digest, verdict: result.verdict } };
     saveGuardState(g);
   }
   return result;
 }
 
 /** After the hook: whatever changed since the guard looked was written by Driftor (evidence, logs), so excuse it while unchanged. */
-function recordOwnWrites(before) {
-  const now = guard.dirtyHashes(ROOT);
+function recordOwnWrites(before, ref) {
+  const now = guard.dirtyHashes(ROOT, ref);
   if (!now) return;
   const g = loadGuardState();
   for (const [f, h] of Object.entries(now)) if (h !== before[f]) g.own[f] = h;
@@ -450,7 +453,7 @@ async function cmdHook() {
   try {
     await stopHook({ session, requests, verdict });
   } finally {
-    if (verdict.dirty) recordOwnWrites(verdict.dirty);
+    if (verdict.dirty) recordOwnWrites(verdict.dirty, verdict.ref);
   }
 }
 
