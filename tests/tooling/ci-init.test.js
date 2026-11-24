@@ -78,13 +78,14 @@ describe("driftor init", () => {
     assert.deepEqual(settings.permissions.allow, ["Bash(ls)"]);
     assert.equal(settings.hooks.Stop.length, 2);
     assert.equal(settings.hooks.Stop[1].hooks[0].command, 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --hook');
+    assert.equal(settings.hooks.SessionStart[0].hooks[0].command, settings.hooks.Stop[1].hooks[0].command);
 
     assert.equal(read("package.json").scripts["driftor:check"], "node .driftor/driftor.js gate --dry-run");
     assert.equal(read(".driftor/package.json").type, "commonjs");
-    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
+    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/guard.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
 
     // The copied runtime must load on its own: every module it requires was copied too.
-    for (const args of [["--list"], ["--hook"], ["gate", "--dry-run"]]) {
+    for (const args of [["--list"], ["--hook"], ["--guard"], ["gate", "--dry-run"]]) {
       const r = spawnSync(process.execPath, [path.join(dir, ".driftor", "driftor.js"), ...args], {
         cwd: dir,
         input: "{}",

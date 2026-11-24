@@ -251,7 +251,8 @@ describe("guard: starting point and reporting", () => {
   });
 
   it("is off with guard.enabled false, and skips outside git", () => {
-    edit("driftor.config.json", '"maxHealAttempts": 3', '"maxHealAttempts": 3,\n  "guard": { "enabled": false }');
+    const c = config();
+    write("driftor.config.json", JSON.stringify({ ...c, guard: { ...c.guard, enabled: false } }, null, 2));
     assert.equal(check().verdict, "off");
     const plain = fs.mkdtempSync(path.join(os.tmpdir(), "driftor-guard-nogit-"));
     try {
