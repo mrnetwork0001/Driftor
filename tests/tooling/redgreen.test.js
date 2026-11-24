@@ -82,6 +82,13 @@ describe("red→green: the receipt", () => {
     assert.match(rg.describeReceipt(receipt), /one still fails; one passed before and fails now; two reached no verdict on one side/);
   });
 
+  it("a red→red test that now fails at a later step says it got further", () => {
+    const at = (r, step) => ({ ...r, failure: { ...r.failure, step_index: step } });
+    const receipt = rg.buildReceipt(baselineOf(at(res("t-1", "failed", "no Revoke control"), 1)), [at(res("t-1", "failed", "KEY-001 is absent from the list"), 2)]);
+    assert.deepEqual([receipt.rows[0].beforeStep, receipt.rows[0].afterStep], [1, 2]);
+    assert.ok(rg.formatReceipt(receipt).some((l) => /failed at step 1 before the change, at step 2 now \(it got further\)/.test(l)));
+  });
+
   it("nothing red before means nothing is proven", () => {
     const receipt = rg.buildReceipt(baselineOf(res("t-1", "passed")), [res("t-1", "passed")]);
     assert.equal(receipt.summary.verdict, "unproven");
