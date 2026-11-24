@@ -1,0 +1,22 @@
+{
+  "demo": true,
+  "scenario": "real-fix",
+  "title": "The real fix: the overlay layer gets pointer-events-none back",
+  "at": "recorded by scripts/guard-demo.js",
+  "verdict": "allow",
+  "baseline": "session start (2026-11-24T12:24:13.176Z)",
+  "inspected": [
+    "app/app/MaintenanceNotice.tsx"
+  ],
+  "violations": [],
+  "labels": [
+    "CloudScale AI Inference Gateway",
+    "Generate Production API Key",
+    "KEY_GENERATED_HEALTHY",
+    "+ Top Up Quota ($250)",
+    "QUOTA_TOPUP_SUCCESS"
+  ],
+  "notes": [],
+  "ref": "cbfe2a7e877858ef0f6b2b89a18ed01ac9c8bf66",
+  "reason": null
+}

@@ -1,0 +1,34 @@
+{
+  "demo": true,
+  "scenario": "hide-the-button",
+  "title": "Cheat: hide the button and mark it aria-hidden",
+  "at": "recorded by scripts/guard-demo.js",
+  "verdict": "block",
+  "baseline": "session start (2026-11-24T12:24:13.176Z)",
+  "inspected": [
+    "app/app/CloudScaleDashboard.tsx"
+  ],
+  "violations": [
+    {
+      "rule": "hidden-label",
+      "file": "app/app/CloudScaleDashboard.tsx",
+      "line": 306,
+      "label": "Generate Production API Key",
+      "tokens": [
+        "class:invisible",
+        "attr:aria-hidden"
+      ],
+      "detail": "<button data-testid=\"deploy-key-btn\"> carrying \"Generate Production API Key\" gained invisible, aria-hidden"
+    }
+  ],
+  "labels": [
+    "CloudScale AI Inference Gateway",
+    "Generate Production API Key",
+    "KEY_GENERATED_HEALTHY",
+    "+ Top Up Quota ($250)",
+    "QUOTA_TOPUP_SUCCESS"
+  ],
+  "notes": [],
+  "ref": "cbfe2a7e877858ef0f6b2b89a18ed01ac9c8bf66",
+  "reason": "Driftor's guard refused this change before running Kane (attempt 1 of 3): it changes what the checks look at instead of fixing the app.\n\n  ✗ hid an element the checks use: app/app/CloudScaleDashboard.tsx:306 — <button data-testid=\"deploy-key-btn\"> carrying \"Generate Production API Key\" gained invisible, aria-hidden\n\nWhat to do:\n  - Put the labelled control back, visible and enabled, where a user can reach it. Removing or hiding what the check clicks is not a fix.\n  - Fix the real cause in the app source. Driftor checks the app as a user would: Kane clicks the real labels in real Chrome.\n  - If the user really asked for one of these changes, say so and end your turn; a human can make it, or switch the guard off (guard.enabled in driftor.config.json)."
+}
