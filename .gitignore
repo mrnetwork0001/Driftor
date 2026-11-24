@@ -16,3 +16,4 @@ kane-traces/runs/*/evidence/
 .driftor
 # Which objectives the last gate selected (runtime state).
 kane-traces/selection.json
+*.tsbuildinfo

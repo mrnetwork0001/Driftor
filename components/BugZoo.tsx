@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTraces } from "./useTraces";
 import type { RunSummary } from "@/app/api/traces/route";
 
@@ -55,8 +56,23 @@ function latestFor(runs: RunSummary[], name: string | null) {
   );
 }
 
+/** "What the user saw" cards (lib/card.js) by "<run>/<objective>", from /api/cards. */
+function useCards() {
+  const [cards, setCards] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch("/api/cards")
+      .then((r) => (r.ok ? r.json() : { cards: [] }))
+      .then((d: { cards: { run: string; objective: string; src: string }[] }) =>
+        setCards(Object.fromEntries(d.cards.map((c) => [`${c.run}/${c.objective}`, c.src]))),
+      )
+      .catch(() => undefined);
+  }, []);
+  return cards;
+}
+
 export function BugZoo() {
   const { data } = useTraces(5000);
+  const cards = useCards();
   const runs = data?.runs ?? [];
   const rows = [
     { name: null as string | null, title: "Healthy source", story: "Nothing injected. The baseline every bug is measured against.", diff: null as null | { file: string; healthy: string; regressed: string } },
@@ -110,6 +126,16 @@ export function BugZoo() {
                 <div key={o.id} className="font-mono text-xs">
                   <span className="lg:hidden text-graphite">{o.label} · </span>
                   {run ? <Verdict v={run.objectives[o.id]?.verdict} /> : <NotRunYet />}
+                  {run && cards[`${run.id}/${o.id}`] && (
+                    <a
+                      href={cards[`${run.id}/${o.id}`]}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block text-graphite underline decoration-rule underline-offset-2 hover:text-ink"
+                    >
+                      what the user saw
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
