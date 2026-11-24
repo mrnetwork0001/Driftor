@@ -36,6 +36,20 @@ const zooModule = () => {
   }
 };
 
+// `driftor demo` replays archived evidence; it needs no config, no app and no Kane login,
+// so it runs from anywhere (`npx -y github:mrnetwork0001/Driftor demo`).
+if (process.argv[2] === "demo") {
+  const demo = path.join(__dirname, "scripts", "demo.js");
+  if (!fs.existsSync(demo)) {
+    console.error(" ✗ The demo isn't in this copy of Driftor. Run `npx -y github:mrnetwork0001/Driftor demo`.");
+    process.exit(1);
+  }
+  require(demo)
+    .main(process.argv.slice(3))
+    .then((code) => process.exit(code), (err) => (console.error(` ✗ demo: ${err.message}`), process.exit(1)));
+  return;
+}
+
 // `driftor init` sets Driftor up in another repo; it runs before any config exists.
 if (process.argv[2] === "init") {
   process.exit(require("./scripts/init").main(process.argv.slice(3)));
