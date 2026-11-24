@@ -4,23 +4,19 @@ The hackathon asks for at least two public posts (X, LinkedIn, Hacker News or Re
 
 ---
 
-## Post 1 · X thread
+## Post 1 · X
 
 ```
-Your tests clicked the button. Your users can't.
-
-I built Driftor for the #KaneCLIHackathon: a Claude Code hook that won't let the agent say "done" until @TestMuAI Kane CLI has clicked through the app in real Chrome. 🧵
-
-1/ The bug class: one missing class on an invisible full-screen layer. Every button on the page is dead. Unit tests: 4/4 green, because JSDOM never lays out the page, so it can't see what's on top.
-
-2/ The loop: Claude finishes a change → Stop hook runs Kane on desktop + mobile layout → a click doesn't land → the hook blocks the stop and hands Claude Kane's evidence, same session → Claude fixes it → Kane re-verifies. 3 tries, then a human.
-
-3/ In the recorded run I asked Claude for an unrelated feature while that bug sat on the branch. It shipped the feature, Kane caught the dead button, Claude found the missing pointer-events-none on its own, and Kane passed it. 12 turns, no human.
-
-4/ Plus a bug zoo of three one-line UI bugs that all pass unit tests and all fail in Kane, and every verdict is a real archived run. No mocks.
-
-<repo link> · <video link>
-#KaneCLI #ClaudeCode #AIAgents
+AI coding agents say "done" when the unit tests pass, but those tests run in a simulated browser that never actually draws the page.
+So a button covered by an invisible overlay, or a label that disappears on smaller screens, passes every test and ships broken.
+I'm building Driftor for #KaneCLIHackathon: a Claude Code hook that won't let the agent finish until the app has been checked in a real browser.
+When Claude stops, Driftor runs plain-English checks in real Chrome at desktop and narrow window sizes, and sends any failure back to Claude to fix.
+It also has Kane write new tests from the task itself, so the new feature gets checked too, not just the old flows.
+Why @TestMuAI Kane CLI: you describe what to check in plain English, and Kane does it in a real Chrome browser, so I don't maintain brittle Playwright selectors.
+Each run also produces an evidence pack and a step-by-step trace, so Claude learns exactly which step failed and what was on screen.
+To test it, I wrote 5 one-line bugs that the unit tests all miss, and Kane catches every one.
+Built with @claudeai Claude Code.
+Repo + demo: <repo link>
 ```
 
 ---
@@ -30,19 +26,24 @@ I built Driftor for the #KaneCLIHackathon: a Claude Code hook that won't let the
 **Title:** I made Claude Code prove its UI changes in a real browser before it's allowed to say "done"
 
 ```
-Coding agents check their UI work with unit tests, and unit tests run in JSDOM. JSDOM builds the DOM but never lays it out. It doesn't know what's on top of what, so a test can "click" a button that no real user can reach.
+Coding agents check their UI work with unit tests, and unit tests usually run in JSDOM. JSDOM builds the page but never draws it. It doesn't know what's on top of what, which elements are hidden at a given screen width, or what the browser cache hands back, so a test can "click" a button no real user can reach.
 
-Three one-line changes an agent could easily make, each of which leaves the unit suite green and a button dead:
-• a full-screen wrapper (there to position a toast) loses pointer-events-none
-• a loading-state pointer-events-none is left on the button
+To test this, I wrote five one-line bugs an agent could easily make. The unit suite stays green on every one (27/27):
+• a full-screen wrapper (there to position a toast) loses pointer-events-none, so every click on the page is swallowed
+• a loading-state pointer-events-none is left on the main button
 • a closed mobile menu is faded with opacity-0 but not made invisible, so it still catches taps
+• the top-up link is hidden below the lg breakpoint, so it's gone on narrower screens
+• a fetch uses the browser cache instead of no-store, so after a top-up the server has the new balance but the page still shows the old $4,500
 
-For the TestMu AI Kane CLI hackathon I built Driftor, a Claude Code Stop hook. When the agent tries to end its turn after changing the UI, Driftor runs plain-English Kane CLI objectives in real Chrome, at desktop size and in the app's mobile layout. If a click doesn't land, the hook blocks the stop and gives Claude Kane's failing steps and raw trace, in the same session, without telling it what the bug is. Claude fixes it, and Kane re-verifies. After three tries a human gets the evidence.
+For the TestMu AI Kane CLI hackathon I built Driftor, a Claude Code Stop hook. When the agent tries to end its turn, Driftor picks the plain-English Kane CLI checks that the changed files can affect and runs them in real Chrome, at 1920×1080 and 800×1000. It also has Kane design new tests from the task the agent was given, so the new feature is checked, not just the old flows. If anything fails, the hook blocks the stop and gives Claude Kane's failing steps and raw trace, in the same session, without telling it what the bug is. Claude fixes it, and Kane re-verifies. After three tries a human gets the evidence.
+
+Kane fails each of the five bugs where it should, and every verdict is an archived run in the repo. In one real session Claude built a Revoke key button; Kane wrote two tests from the request ("revoke KEY-001 and keep KEY-002 after a reload", "revoke the last key") and both passed. The same gate also runs as a GitHub Actions check with a sticky PR comment.
 
 Things I learned about Kane along the way:
 • Ask it to "click the button" and it may Tab + Enter around a covered one. Say "with a mouse click".
-• Its end-of-run summary can misjudge transparent layers; the step-level evidence is what to trust.
-• Web runs bottom out at 800px wide, and `config set-window` rejects smaller sizes but still exits 0, so check the setting actually changed.
+• Trust the step-level verdicts, not the closing summary. The steps were right, but the summary sometimes named the wrong cause (it blamed a cookie banner for a hidden link).
+• Web runs bottom out at 800px wide, and `config set-window` rejects smaller sizes but still exits 0, so check the setting actually changed. Kane also resets an attached Chrome to 1920px wide.
+• Tests Kane designs can use {{variables}} it never fills in. Give it the app's starting data, and skip any test that still has an empty one.
 
 Repo, with real traces and agent transcripts: <repo link>
 ```
