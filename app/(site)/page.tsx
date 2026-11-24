@@ -24,12 +24,12 @@ const LOOP = [
   {
     cmd: "Stop hook",
     title: "Kane drives real Chrome",
-    body: "Before the turn can end, Driftor sees the source changed and runs every objective through Kane CLI, on a wide screen and a narrow one.",
+    body: "Before the turn can end, Driftor runs the objectives the changed files can affect through Kane CLI, on a wide screen and a narrow one. Kane also designs new tests from the agent’s task, so the new feature gets checked too.",
   },
   {
     cmd: "decision: block",
     title: "The failure goes back to the agent",
-    body: "If a click didn’t land, the hook refuses the stop and hands Claude Kane’s failing steps and raw NDJSON. Same session, no human in between.",
+    body: "If any check fails, the hook refuses the stop and hands Claude Kane’s failing steps and raw NDJSON. Same session, no human in between.",
   },
   {
     cmd: "≤ 3 attempts",
@@ -50,14 +50,18 @@ const PIPELINE = [
 const FILES = [
   ["driftor.config.json", "Your objectives, viewports, app URL, state-reset endpoint and unit command. Point Driftor at another app by editing this file."],
   [".claude/settings.json", "Registers `driftor.js --hook` as Claude Code’s Stop hook. Opt-in: it only acts when the session runs with `DRIFTOR_HOOK=1` (`npm run agent`)."],
-  ["driftor.js", "The CLI: gate (default), `--hook`, `--heal`, `--watch`, and the bug zoo (`--inject <bug>`, `--list`, `--reset`)."],
-  ["driftor_test.js", "Runs each objective through `kane-cli run --agent` at its viewport, resets app state first, runs the unit suite once, and archives everything to kane-traces/runs/."],
+  ["driftor.js", "The CLI: gate (default), `--hook`, `--heal`, `--watch`, `--accept \"<task>\"`, `init`, and the bug zoo (`--inject <bug>`, `--list`, `--reset`)."],
+  ["driftor_test.js", "Runs each selected objective through `kane-cli run --agent` at its viewport, with its own app state (`/app?run=<id>`), runs the unit suite once, and archives everything to kane-traces/runs/. `--changed` or `--files a,b` runs only what those files can affect."],
+  ["lib/select.js", "Change-based selection: each objective lists the files it `covers`. Shared or unknown files run everything; files that can’t touch the page run nothing, and the run says why."],
+  ["lib/acceptance.js", "Hands the agent’s task and the app’s starting data to Kane’s assurance commands, which design acceptance tests from it, then runs them next to the gate. A test with an empty variable is skipped as no verdict."],
   ["lib/heal.js", "Turns failing NDJSON events into the agent’s bug report. The Traces page uses it too, so it shows the exact prompt."],
   ["lib/regressions.js", "The bug zoo: five one-line UI regressions (dead clicks, a control hidden on narrow screens, a stale cached read), each an exact, reversible swap in the demo app’s source."],
   ["tests/unit", "Vitest + JSDOM suite for CloudScale. It stays green with every bug in the zoo, which is the point."],
   ["specs/PRD.md", "The CloudScale requirements. Every gate check maps to a use case here."],
   ["app/app", "CloudScale, the demo app under test, with a real backend in app/api/cloudscale."],
   ["app/api/traces", "Reads kane-traces/ for the Traces page and the live panels on this page."],
+  ["scripts/init.js", "`driftor init`: sets Driftor up in another Next.js or Vite repo, with the runtime, a starter config and the Stop hook."],
+  [".github/workflows/driftor.yml", "The CI gate: runs Kane headless on each pull request, judges the evidence pack against policies/driftor-gate.yaml and keeps one sticky PR comment (scripts/ci.js, docs/ci.md)."],
 ];
 
 const CHECKS = [
@@ -85,7 +89,7 @@ const FAQ = [
   },
   {
     q: "Does it only work with this demo app?",
-    a: "No. Copy `driftor.config.json`, write your critical flows as plain-English objectives, and set `url` (or pass `--url`). The runner, hook, trace handling and heal prompt don’t know anything about CloudScale.",
+    a: "No. Run `driftor init` in a Next.js or Vite repo (or copy `driftor.config.json`), write your critical flows as plain-English objectives, and set `url` (or pass `--url`). The runner, hook, trace handling and heal prompt don’t know anything about CloudScale.",
   },
   {
     q: "What stops the agent looping forever?",
@@ -239,8 +243,9 @@ export default function Home() {
               <span className="text-pass">✓</span> renders the gateway with two seeded keys and $4,500.00 quota{"\n"}
               <span className="text-pass">✓</span> “Generate Production API Key” adds a key{"\n"}
               <span className="text-pass">✓</span> top-up adds $250 to the quota{"\n"}
-              <span className="text-pass">✓</span> shows the maintenance notice{"\n\n"}
-              <span className="text-graphite">Tests  4 passed (4)</span>
+              <span className="text-pass">✓</span> shows the maintenance notice{"\n"}
+              <span className="text-pass">✓</span> <span className="text-graphite">23 more: run isolation, change selection</span>{"\n\n"}
+              <span className="text-graphite">Tests  27 passed (27)</span>
             </pre>
           </div>
           <ChromeVerdict />
@@ -286,7 +291,8 @@ export default function Home() {
         <H2>The agent gets a bug report, not a red X.</H2>
         <Lede>
           Each objective writes an NDJSON trace. When a step fails, <code className="font-mono text-sm text-ink">driftor:heal</code>{" "}
-          pulls out what went wrong, where, and a suggested fix, and builds the agent’s prompt from it.
+          pulls out what went wrong, where, and a suggested fix, and builds the agent’s prompt from it. The run log
+          also shows the tests Kane designed from the agent’s task, in the “from task” column.
         </Lede>
         <EvidencePanels />
         <h3 className="mt-12 font-mono text-xs text-graphite">every gate run, newest first</h3>
@@ -391,15 +397,14 @@ export default function Home() {
           <div className="min-w-0">
             <h3 className="font-mono text-xs text-[#9A958A] mb-4">as a CI gate</h3>
             <pre className="font-mono text-[13px] sm:text-sm leading-7 overflow-x-auto">
-              <span className="text-[#9A958A]"># driftor exits non-zero when a check fails,</span>
+              <span className="text-[#9A958A]"># .github/workflows/driftor.yml, on every PR</span>
+              {"\n"}- run: npm ci && npx vitest run
+              {"\n"}- run: npm run build && npx next start -p 3000 &
+              {"\n"}- run: npx kane-cli login --username … --access-key …
+              {"\n"}- run: node driftor.js gate --headless
+              {"\n"}- run: node scripts/ci.js verdict &lt;run&gt; --policy policies/driftor-gate.yaml
               {"\n"}
-              <span className="text-[#9A958A]"># so any CI step can block the merge on it.</span>
-              {"\n"}- run: npm ci
-              {"\n"}- run: npm run build && npm start &
-              {"\n"}- run: npx wait-on http://localhost:3000
-              {"\n"}- run: npm run driftor:gate -- --headless
-              {"\n"}
-              <span className="text-[#9A958A]">  # kane-cli must be logged in on the runner</span>
+              <span className="text-[#9A958A]">  # one sticky PR comment; secrets KANE_USERNAME, KANE_ACCESS_KEY</span>
             </pre>
           </div>
         </div>
