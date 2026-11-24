@@ -1,0 +1,263 @@
+diff --git a/app/app/CloudScaleDashboard.tsx b/app/app/CloudScaleDashboard.tsx
+index e2c8314..e2690f8 100644
+--- a/app/app/CloudScaleDashboard.tsx
++++ b/app/app/CloudScaleDashboard.tsx
+@@ -10,13 +10,15 @@ import MaintenanceNotice from "./MaintenanceNotice";
+ /*
+  * CloudScale — the demo target that Driftor guards. State lives server-side
+  * in /api/cloudscale. Kane objectives, tests/*_test.md and tests/unit depend on:
+- *   key-status    SYSTEM_READY | KEY_GENERATED_HEALTHY | QUOTA_TOPUP_SUCCESS  (label "Action status")
++ *   key-status    SYSTEM_READY | KEY_GENERATED_HEALTHY | KEY_REVOKED | QUOTA_TOPUP_SUCCESS  (label "Action status")
+  *   key-count     "N Keys"
+  *   quota-balance "$4,500.00"  (label "Available quota")
+  *   deploy-key-btn "Generate Production API Key"
+  *   topup-btn     "+ Top Up Quota ($250)"
+  *   heading       "CloudScale AI Inference Gateway"
+- * Keep those labels unique on the page: Kane finds controls by their text.
++ * Keep those labels unique on the page: Kane finds controls by their text. The
++ * per-row "Revoke" buttons repeat, so they carry revoke-btn-<KEY-ID> and an
++ * aria-label ("Revoke <key name>") to pick one row out.
+  */
+ 
+ const NAV = [
+@@ -57,10 +59,14 @@ function runId(): string | null {
+ }
+ 
+ /** Workspace state changes on every write, so never answer from the browser's HTTP cache. */
+-async function call<T>(path: string, method: "GET" | "POST" = "GET"): Promise<T> {
++async function call<T>(path: string, method: "GET" | "POST" = "GET", body?: unknown): Promise<T> {
+   const run = runId();
+   const url = run ? `${path}?run=${encodeURIComponent(run)}` : path;
+-  const res = await fetch(url, { method, cache: "no-store" });
++  const res = await fetch(url, {
++    method,
++    cache: "no-store",
++    ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
++  });
+   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
+   return (await res.json()) as T;
+ }
+@@ -77,6 +83,7 @@ function useNow(ms = 15_000) {
+ 
+ const KIND_DOT: Record<ActivityEntry["kind"], string> = {
+   "key.created": "bg-cs-brand",
++  "key.revoked": "bg-rose-500",
+   "quota.topup": "bg-emerald-500",
+   "workspace.reset": "bg-zinc-400",
+ };
+@@ -126,6 +133,12 @@ export default function CloudScaleDashboard() {
+       confetti({ particleCount: 60, spread: 55, origin: { y: 0.4 }, colors: ["#2443B8", "#18181B", "#A1A1AA"] });
+     });
+ 
++  const handleRevokeKey = (keyId: string) =>
++    run(async () => {
++      await call<CloudScaleState>("/api/cloudscale/keys/revoke", "POST", { keyId });
++      await refresh();
++    });
++
+   const handleTopup = () =>
+     run(async () => {
+       await call<CloudScaleState>("/api/cloudscale/topup", "POST");
+@@ -338,12 +351,13 @@ export default function CloudScaleDashboard() {
+                       <th className="px-4 py-2 font-normal">Key</th>
+                       <th className="px-4 py-2 font-normal hidden sm:table-cell">Rate limit</th>
+                       <th className="px-4 py-2 font-normal">Created</th>
++                      <th className="px-4 py-2 font-normal text-right">Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {!state && (
+                       <tr>
+-                        <td colSpan={4} className="px-4 py-6 text-center text-cs-sub">
++                        <td colSpan={5} className="px-4 py-6 text-center text-cs-sub">
+                           Loading keys…
+                         </td>
+                       </tr>
+@@ -361,6 +375,17 @@ export default function CloudScaleDashboard() {
+                         <td className="px-4 py-3 text-cs-sub tabular-nums">
+                           {k.createdAt.slice(0, 10)} · {ago(k.createdAt, now)}
+                         </td>
++                        <td className="px-4 py-3 text-right">
++                          <button
++                            onClick={() => handleRevokeKey(k.id)}
++                            disabled={busy}
++                            data-testid={`revoke-btn-${k.id}`}
++                            aria-label={`Revoke ${k.name}`}
++                            className="rounded-md border border-cs-line px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
++                          >
++                            Revoke
++                          </button>
++                        </td>
+                       </tr>
+                     ))}
+                   </tbody>
+diff --git a/lib/cloudscale.ts b/lib/cloudscale.ts
+index 9a5af23..b47fbbc 100644
+--- a/lib/cloudscale.ts
++++ b/lib/cloudscale.ts
+@@ -3,7 +3,7 @@
+  * Used by the API routes (persisted to disk) and by the unit tests (in memory).
+  */
+ 
+-export type ActionStatus = "SYSTEM_READY" | "KEY_GENERATED_HEALTHY" | "QUOTA_TOPUP_SUCCESS";
++export type ActionStatus = "SYSTEM_READY" | "KEY_GENERATED_HEALTHY" | "KEY_REVOKED" | "QUOTA_TOPUP_SUCCESS";
+ 
+ export interface ApiKey {
+   id: string;
+@@ -16,7 +16,7 @@ export interface ApiKey {
+ 
+ export interface ActivityEntry {
+   at: string;
+-  kind: "key.created" | "quota.topup" | "workspace.reset";
++  kind: "key.created" | "key.revoked" | "quota.topup" | "workspace.reset";
+   message: string;
+ }
+ 
+@@ -74,7 +74,9 @@ function randomHex(bytes: number): string {
+ 
+ /** Returns the new state and the full secret, which is never stored. */
+ export function generateKey(state: CloudScaleState, now = new Date()): { state: CloudScaleState; secret: string } {
+-  const n = state.keys.length + 1;
++  // Counts up from the highest id ever issued, not from keys.length: after a
++  // revoke the length goes down and would hand out an id that already exists.
++  const n = state.keys.reduce((max, k) => Math.max(max, Number(k.id.slice(4)) || 0), 0) + 1;
+   const secret = `cs_live_${randomHex(16)}`;
+   const key: ApiKey = {
+     id: `KEY-${String(n).padStart(3, "0")}`,
+@@ -95,6 +97,19 @@ export function generateKey(state: CloudScaleState, now = new Date()): { state:
+   };
+ }
+ 
++/** Removes one key. Returns null when no key has that id, so the route can 404. */
++export function revokeKey(state: CloudScaleState, keyId: string, now = new Date()): CloudScaleState | null {
++  const key = state.keys.find((k) => k.id === keyId);
++  if (!key) return null;
++  return {
++    ...state,
++    keys: state.keys.filter((k) => k.id !== keyId),
++    status: "KEY_REVOKED",
++    updatedAt: now.toISOString(),
++    activity: log(state, { at: now.toISOString(), kind: "key.revoked", message: `${key.id} “${key.name}” revoked` }),
++  };
++}
++
+ export function topUp(state: CloudScaleState, now = new Date()): CloudScaleState {
+   const quotaCents = state.quotaCents + TOPUP_CENTS;
+   return {
+diff --git a/tests/unit/cloudscale.test.tsx b/tests/unit/cloudscale.test.tsx
+index a1b5950..7040b3f 100644
+--- a/tests/unit/cloudscale.test.tsx
++++ b/tests/unit/cloudscale.test.tsx
+@@ -6,7 +6,7 @@
+  */
+ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+-import { generateKey, seedState, topUp, type CloudScaleState } from "@/lib/cloudscale";
++import { generateKey, revokeKey, seedState, topUp, type CloudScaleState } from "@/lib/cloudscale";
+ import CloudScaleDashboard from "@/app/app/CloudScaleDashboard";
+ 
+ vi.mock("canvas-confetti", () => ({ default: () => undefined }));
+@@ -29,6 +29,11 @@ function fakeApi(input: RequestInfo | URL, init?: RequestInit) {
+     const res = generateKey(server);
+     server = res.state;
+     body = res;
++  } else if (url === "/api/cloudscale/keys/revoke" && method === "POST") {
++    const { keyId } = JSON.parse(String(init?.body)) as { keyId: string };
++    const next = revokeKey(server, keyId);
++    if (!next) return Promise.resolve(new Response("unknown key", { status: 404 }));
++    body = server = next;
+   } else if (url === "/api/cloudscale/topup" && method === "POST") body = server = topUp(server);
+   else return Promise.resolve(new Response("not found", { status: 404 }));
+   return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+@@ -62,6 +67,27 @@ describe("CloudScale dashboard (JSDOM)", () => {
+     expect(screen.getByTestId("activity-log").textContent).toContain("KEY-003 “Agent fleet #3” created");
+   });
+ 
++  it("“Revoke” removes that row's key and drops the count", async () => {
++    render(<CloudScaleDashboard />);
++    await screen.findByText("2 Keys");
++    fireEvent.click(screen.getByTestId("revoke-btn-KEY-002"));
++    expect(await screen.findByText("1 Keys")).toBeTruthy();
++    expect(screen.queryByTestId("revoke-btn-KEY-002")).toBeNull();
++    expect(screen.getByTestId("revoke-btn-KEY-001")).toBeTruthy();
++    expect(screen.getByTestId("key-status").textContent).toContain("KEY_REVOKED");
++    expect(screen.getByTestId("activity-log").textContent).toContain("KEY-002 “Staging verifier” revoked");
++  });
++
++  it("a key generated after a revoke keeps a fresh id", async () => {
++    render(<CloudScaleDashboard />);
++    await screen.findByText("2 Keys");
++    fireEvent.click(screen.getByTestId("revoke-btn-KEY-001"));
++    await screen.findByText("1 Keys");
++    fireEvent.click(screen.getByTestId("deploy-key-btn"));
++    expect(await screen.findByText("2 Keys")).toBeTruthy();
++    expect(screen.getByTestId("revoke-btn-KEY-003")).toBeTruthy();
++  });
++
+   it("top-up adds $250 to the quota", async () => {
+     render(<CloudScaleDashboard />);
+     await screen.findByText("$4,500.00");
+diff --git a/tests/unit/run-isolation.test.ts b/tests/unit/run-isolation.test.ts
+index e91b0b5..de77350 100644
+--- a/tests/unit/run-isolation.test.ts
++++ b/tests/unit/run-isolation.test.ts
+@@ -9,6 +9,7 @@ import fs from "fs";
+ import path from "path";
+ import { GET } from "@/app/api/cloudscale/route";
+ import { POST as generate } from "@/app/api/cloudscale/keys/route";
++import { POST as revoke } from "@/app/api/cloudscale/keys/revoke/route";
+ import { POST as reset } from "@/app/api/cloudscale/reset/route";
+ import { POST as topup } from "@/app/api/cloudscale/topup/route";
+ import type { CloudScaleState } from "@/lib/cloudscale";
+@@ -55,6 +56,29 @@ describe("run-scoped CloudScale state", () => {
+     expect((await json(await GET(req("", B)))).status).toBe("SYSTEM_READY");
+   });
+ 
++  it("revoking a key persists in that run only", async () => {
++    await reset(req("/reset", A));
++    await reset(req("/reset", B));
++
++    const keyReq = (run: string, keyId?: string) =>
++      new Request(`http://localhost/api/cloudscale/keys/revoke?run=${run}`, {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        ...(keyId === undefined ? {} : { body: JSON.stringify({ keyId }) }),
++      });
++
++    const revoked = await json(await revoke(keyReq(A, "KEY-002")));
++    expect(revoked.status).toBe("KEY_REVOKED");
++    expect(revoked.keys.map((k) => k.id)).toEqual(["KEY-001"]);
++
++    expect((await json(await GET(req("", A)))).keys).toHaveLength(1);
++    expect((await json(await GET(req("", B)))).keys).toHaveLength(2);
++
++    expect((await revoke(keyReq(A, "KEY-404"))).status).toBe(404);
++    expect((await revoke(keyReq(A))).status).toBe(400);
++    expect((await json(await GET(req("", A)))).keys).toHaveLength(1);
++  });
++
+   it("an empty run id means the shared state", async () => {
+     const shared = await json(await GET(req("")));
+     const empty = await json(await GET(req("", "")));
+diff --git a/app/api/cloudscale/keys/revoke/route.ts b/app/api/cloudscale/keys/revoke/route.ts
+new file mode 100644
+index 0000000..15d3ff1
+--- /dev/null
++++ b/app/api/cloudscale/keys/revoke/route.ts
+@@ -0,0 +1,16 @@
++import { NextResponse } from "next/server";
++import { revokeKey } from "@/lib/cloudscale";
++import { load, runIdFrom, save } from "@/lib/cloudscale-store";
++
++export const dynamic = "force-dynamic";
++
++/** Revokes the key named by `{ keyId }`. An id that isn't in the workspace changes nothing. */
++export async function POST(request: Request) {
++  const id = runIdFrom(request);
++  if ("error" in id) return NextResponse.json({ error: id.error }, { status: 400 });
++  const { keyId } = (await request.json().catch(() => ({}))) as { keyId?: string };
++  if (!keyId) return NextResponse.json({ error: "keyId is required" }, { status: 400 });
++  const state = revokeKey(load(id.run), keyId);
++  if (!state) return NextResponse.json({ error: `unknown key ${keyId}` }, { status: 404 });
++  return NextResponse.json(save(state, id.run));
++}
