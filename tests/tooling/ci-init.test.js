@@ -78,13 +78,16 @@ describe("driftor init", () => {
     assert.deepEqual(settings.permissions.allow, ["Bash(ls)"]);
     assert.equal(settings.hooks.Stop.length, 2);
     assert.equal(settings.hooks.Stop[1].hooks[0].command, 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --hook');
+    assert.equal(settings.hooks.UserPromptSubmit.length, 1);
+    assert.equal(settings.hooks.UserPromptSubmit[0].hooks[0].command, 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --prompt-hook');
+    assert.equal(settings.hooks.UserPromptSubmit[0].hooks[0].timeout, 900);
 
     assert.equal(read("package.json").scripts["driftor:check"], "node .driftor/driftor.js gate --dry-run");
     assert.equal(read(".driftor/package.json").type, "commonjs");
-    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
+    for (const f of ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/redgreen.js"]) assert.ok(fs.existsSync(path.join(dir, ".driftor", f)));
 
     // The copied runtime must load on its own: every module it requires was copied too.
-    for (const args of [["--list"], ["--hook"], ["gate", "--dry-run"]]) {
+    for (const args of [["--list"], ["--hook"], ["--prompt-hook"], ["gate", "--dry-run"]]) {
       const r = spawnSync(process.execPath, [path.join(dir, ".driftor", "driftor.js"), ...args], {
         cwd: dir,
         input: "{}",
@@ -97,6 +100,7 @@ describe("driftor init", () => {
     // Running it again adds nothing twice.
     assert.equal(silently(() => init(["--dir", dir])), 0);
     assert.equal(read(".claude/settings.json").hooks.Stop.length, 2);
+    assert.equal(read(".claude/settings.json").hooks.UserPromptSubmit.length, 1);
     assert.equal(mergeHook(path.join(dir, ".claude", "settings.json")), "already there");
   });
 
