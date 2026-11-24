@@ -37,6 +37,8 @@ describe("CI PR comment", () => {
     assert.match(md, /is green\. It runs in JSDOM/);
     assert.match(md, /injected regression: overlay/);
     assert.ok(md.includes("(https://example.test/run/1)"));
+    // The run's "what the user saw" card (lib/card.js) is linked, not embedded, without a URL for it.
+    assert.ok(md.includes("What the user saw: `card-desktop-occlusion-gate.png` in the [run artifact](https://example.test/run/1)"));
   });
 });
 

@@ -15,6 +15,10 @@
  *
  * comment: renders run.json, the failing steps (lib/heal.js extractFindings) and
  * the verdict as Markdown, headed by a marker so CI can update one sticky comment.
+ * Each failing objective's "what the user saw" card (lib/card.js) is embedded as
+ * an image when it is committed at the checked-out commit (a GitHub comment needs
+ * a URL; raw.githubusercontent.com serves public repos only), and otherwise named
+ * with a link to the run's artifact, which holds it. See docs/ci.md.
  */
 
 const { spawnSync } = require("child_process");
@@ -135,8 +139,30 @@ function cmdVerdict(runDir, policy) {
 const cell = (s) => String(s ?? "").replace(/\|/g, "\\|").replace(/\n+/g, " ");
 const quote = (s) => String(s).split("\n").map((l) => `> ${l}`).join("\n");
 
-/** Markdown for one archived run. `artifactUrl` links the uploaded run folder. */
-function renderComment(runDir, { artifactUrl } = {}) {
+/**
+ * A URL GitHub can show for a file in this repo, or null: only for a file
+ * committed unchanged at HEAD, on GitHub Actions (where HEAD is on GitHub).
+ * DRIFTOR_CARD_BASE_URL (e.g. a deployed copy of the site) overrides it.
+ */
+function committedFileUrl(file, env = process.env) {
+  const rel = path.relative(ROOT, file).split(path.sep).join("/");
+  if (rel.startsWith("..")) return null;
+  if (env.DRIFTOR_CARD_BASE_URL) return `${env.DRIFTOR_CARD_BASE_URL.replace(/\/$/, "")}/${rel}`;
+  const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo } = env;
+  if (!server || !repo) return null;
+  const git = (...args) => spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  if (git("ls-files", "--error-unmatch", "--", rel).status !== 0) return null; // made in this job, not committed
+  if (git("diff", "--quiet", "HEAD", "--", rel).status !== 0) return null;
+  const sha = git("rev-parse", "HEAD").stdout.trim();
+  if (!sha) return null;
+  return server === "https://github.com" ? `https://raw.githubusercontent.com/${repo}/${sha}/${rel}` : `${server}/${repo}/raw/${sha}/${rel}`;
+}
+
+/**
+ * Markdown for one archived run. `artifactUrl` links the uploaded run folder;
+ * `cardUrl(file)` gives an embeddable URL for a card, or null to link the artifact instead.
+ */
+function renderComment(runDir, { artifactUrl, cardUrl = () => null } = {}) {
   const run = readJson(path.join(runDir, "run.json")) || {};
   const verdict = readJson(path.join(runDir, "verdict.json"));
   const cfg = readJson(path.join(ROOT, "driftor.config.json")) || {};
@@ -196,6 +222,16 @@ function renderComment(runDir, { artifactUrl } = {}) {
       const mine = findings.filter((f) => f.trace === t.file);
       if (!mine.length) continue;
       out.push("", `**${t.id}**`);
+      const card = path.join(runDir, `card-${t.id}.png`);
+      if (fs.existsSync(card)) {
+        const url = cardUrl(card);
+        out.push(
+          "",
+          url
+            ? `![What the user saw: ${t.id}](${url})`
+            : `What the user saw: \`${path.basename(card)}\`${artifactUrl ? ` in the [run artifact](${artifactUrl})` : " in the run folder"}: Kane's screenshot of the failing step.`
+        );
+      }
       for (const f of mine) {
         if (f.step != null) out.push(`- Step ${f.step}: ${cell(f.summary)}${f.code ? ` (\`${f.code}\`)` : ""}`);
       }
@@ -254,7 +290,9 @@ function main(argv) {
     return cmdVerdict(runDir, path.resolve(flag("--policy") || path.join(ROOT, "policies", "driftor-gate.yaml")));
   }
   const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: id } = process.env;
-  const md = renderComment(runDir, { artifactUrl: server && repo && id ? `${server}/${repo}/actions/runs/${id}` : undefined });
+  // DRIFTOR_ARTIFACT_URL: the uploaded run folder itself (actions/upload-artifact's artifact-url output).
+  const artifactUrl = process.env.DRIFTOR_ARTIFACT_URL || (server && repo && id ? `${server}/${repo}/actions/runs/${id}` : undefined);
+  const md = renderComment(runDir, { artifactUrl, cardUrl: (file) => committedFileUrl(file) });
   if (flag("--out")) fs.writeFileSync(flag("--out"), md);
   else process.stdout.write(md);
   return 0;
@@ -262,4 +300,4 @@ function main(argv) {
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
 
-module.exports = { renderComment, collectPacks, latestRun, MARKER };
+module.exports = { renderComment, committedFileUrl, collectPacks, latestRun, MARKER };

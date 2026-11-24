@@ -5,7 +5,7 @@
  *   node driftor.js init [--dir <repo>] [--port <n>] [--force]
  *
  * It writes, in the target repo:
- *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance}.js   the runtime the hook runs
+ *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance,card}.js   the runtime the hook runs
  *   driftor.config.json        placeholder objectives to edit (kept if it exists, unless --force)
  *   .claude/settings.json      the Stop hook, merged into existing hooks; it only acts with DRIFTOR_HOOK=1
  *   package.json scripts       driftor:gate, driftor:check, driftor:heal, driftor:watch, driftor:agent
@@ -18,7 +18,7 @@ const path = require("path");
 
 const PKG_ROOT = path.join(__dirname, "..");
 // Everything driftor.js and driftor_test.js require at runtime (lib/regressions.js is optional).
-const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js"];
+const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/card.js"];
 const HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --hook';
 const IGNORE = ["kane-traces/latest.ndjson", "kane-traces/hook.log", ".data/driftor-hook.json", ".testmuai/evidence/"];
 

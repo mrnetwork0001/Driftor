@@ -106,8 +106,24 @@ jobs:
           npx kane-cli evidence lint-policy policies/driftor-gate.yaml
           node scripts/ci.js verdict "$run_dir" --policy policies/driftor-gate.yaml
 
+      # Before the comment, so the comment can link the artifact (it holds the evidence cards).
+      - name: Upload the run folder
+        id: upload
+        if: always() && steps.verdict.outputs.run_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: driftor-run-${{ github.run_id }}
+          path: |
+            ${{ steps.verdict.outputs.run_dir }}
+            kane-traces/hook.log
+            app.log
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Render the PR comment
         if: always() && steps.verdict.outputs.run_dir != ''
+        env:
+          DRIFTOR_ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         run: |
           node scripts/ci.js comment "${{ steps.verdict.outputs.run_dir }}" --out driftor-comment.md
           cat driftor-comment.md >> "$GITHUB_STEP_SUMMARY"
@@ -127,18 +143,6 @@ jobs:
             const mine = comments.find((c) => c.user?.type === "Bot" && c.body?.includes(marker));
             if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
             else await github.rest.issues.createComment({ owner, repo, issue_number, body });
-
-      - name: Upload the run folder
-        if: always() && steps.verdict.outputs.run_dir != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: driftor-run-${{ github.run_id }}
-          path: |
-            ${{ steps.verdict.outputs.run_dir }}
-            kane-traces/hook.log
-            app.log
-          if-no-files-found: warn
-          retention-days: 14
 
       - name: Fail the check if Kane or the policy failed
         if: always() && env.HAS_KANE_CREDENTIALS == 'true'

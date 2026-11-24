@@ -11,6 +11,9 @@
  *   node driftor.js --inject [bug]  # ship a bug-zoo regression into the demo app (default: overlay)
  *   node driftor.js --list          # list the bug-zoo regressions
  *   node driftor.js --reset         # revert every injected regression (demo housekeeping, not a heal)
+ *   node driftor.js --card [runDir] [--objective <id>]
+ *                                   # "what the user saw" PNG per failing objective (lib/card.js);
+ *                                   # default: the newest run folder in kane-traces/runs/
  *   node driftor.js --accept "<task>" [--no-gate] [--fresh]
  *                                   # what the hook does with a task: Kane designs acceptance tests
  *                                   # from it (lib/acceptance.js) and runs them next to the gate
@@ -102,6 +105,23 @@ function runGateAsync({ env = {} } = {}) {
 
 const RUNS_DIR = path.join(TRACE_DIR, "runs");
 const listRuns = () => (fs.existsSync(RUNS_DIR) ? fs.readdirSync(RUNS_DIR).sort() : []);
+
+/**
+ * Cards in the newest run folder (made by driftor_test.js after a failed run, or
+ * by `--card`), keyed by trace file name, as absolute paths: Claude Code reads
+ * images, so the hook points it at the page Kane saw.
+ */
+function latestCards() {
+  const newest = listRuns().pop();
+  if (!newest) return {};
+  const dir = path.join(RUNS_DIR, newest);
+  const cards = {};
+  for (const f of fs.readdirSync(dir)) {
+    const m = /^card-(.+)\.png$/.exec(f);
+    if (m) cards[`${m[1]}.ndjson`] = path.join(dir, f);
+  }
+  return cards;
+}
 
 function runUnitTests() {
   const res = spawnSync("npx", ["vitest", "run", "--reporter=dot"], { cwd: ROOT, stdio: "inherit" });
@@ -202,7 +222,7 @@ function cmdHeal() {
     return;
   }
 
-  const prompt = buildHealPrompt(findings, { app: CONFIG.app });
+  const prompt = buildHealPrompt(findings, { app: CONFIG.app, cards: latestCards() });
   console.log(" 📄 Prompt for the agent, built from the failing NDJSON events:\n");
   console.log(prompt.split("\n").map((l) => `   │ ${l}`).join("\n"));
   console.log("");
@@ -420,11 +440,18 @@ async function cmdHook() {
     const findings = readFindings();
     parts.push(
       findings.length
-        ? buildHealPrompt(findings, { app: CONFIG.app })
+        ? buildHealPrompt(findings, { app: CONFIG.app, cards: latestCards() })
         : `Kane CLI's gate failed but reported no failing step. Output:\n${output.slice(-3000)}`
     );
   }
-  if (derivedFailed.length) parts.push(acceptance.buildAcceptancePrompt(derived.results, { app: CONFIG.app, viewport: ACCEPT.viewport }));
+  if (derivedFailed.length) {
+    const cards = latestCards();
+    const shots = derivedFailed
+      .map((r) => [r, cards[r.trace || `task-${r.id}.ndjson`]])
+      .filter(([, card]) => card)
+      .map(([r, card]) => `Screenshot of what the user saw (${r.title || r.id}): ${card}. Read it.`);
+    parts.push([acceptance.buildAcceptancePrompt(derived.results, { app: CONFIG.app, viewport: ACCEPT.viewport }), ...shots].join("\n"));
+  }
   out({
     decision: "block",
     reason:
@@ -459,6 +486,16 @@ async function gateWithTask({ requests, appUrl, trigger, env = {}, noGate = fals
     );
   }
   const derived = await finishDerived(pending, { appUrl, runDir: path.join(RUNS_DIR, runDir), log });
+  // Cards for the derived checks that failed (the gate's own were made by driftor_test.js). Best effort.
+  if (derived && derived.results.some((r) => r.verdict === "failed")) {
+    try {
+      for (const c of require("./lib/card").makeCards(path.join(RUNS_DIR, runDir), { skipExisting: true })) {
+        if (c.card) log(`card: ${path.relative(ROOT, c.card)}`);
+      }
+    } catch {
+      /* no card, same verdict */
+    }
+  }
   return { ...gate, derived, runDir: path.join("kane-traces", "runs", runDir) };
 }
 
@@ -523,6 +560,22 @@ async function cmdAccept(task) {
   process.exit(gatePassed && !failedDerived.length ? 0 : 1);
 }
 
+/* ── --card: "what the user saw" cards for a run folder ───────────────────── */
+
+function cmdCard(dir, objective) {
+  const runDir = dir ? path.resolve(dir) : listRuns().length ? path.join(RUNS_DIR, listRuns().pop()) : null;
+  if (!runDir || !fs.existsSync(path.join(runDir, "run.json"))) {
+    console.error(" ✗ No run folder. Give one: node driftor.js --card kane-traces/runs/<stamp> [--objective <id>]");
+    process.exit(2);
+  }
+  const results = require("./lib/card").makeCards(runDir, { objective });
+  if (!results.length) console.log(` ✓ No failing objective${objective ? ` named ${objective}` : ""} in ${path.relative(ROOT, runDir) || runDir}; no card to make.`);
+  for (const r of results) {
+    console.log(r.card ? ` ▣ ${r.id}: ${path.relative(process.cwd(), r.card)} (step ${r.step}, ${Math.round(fs.statSync(r.card).size / 1024)} KB)` : ` · ${r.id}: no card (${r.skipped})`);
+  }
+  process.exit(results.some((r) => !r.card) ? 1 : 0);
+}
+
 /* ── watch ────────────────────────────────────────────────────────────────── */
 
 function cmdWatch() {
@@ -556,6 +609,7 @@ const after = (f) => {
 
 if (args.includes("--hook")) cmdHook();
 else if (args.includes("--accept")) cmdAccept(after("--accept"));
+else if (args.includes("--card")) cmdCard(after("--card"), after("--objective"));
 else if (args.includes("--inject")) cmdInject(after("--inject"));
 else if (args.includes("--list")) cmdList();
 else if (args.includes("--heal")) cmdHeal();
