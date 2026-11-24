@@ -40,6 +40,9 @@
       "lib/heal.js",
       "lib/regressions.js",
       "lib/select.js",
+      "lib/guard.js",
+      "lib/card.js",
+      "lib/acceptance.js",
       "tests/unit/**",
       "kane-traces/**",
       "specs/**",
@@ -61,6 +64,34 @@
     "startPath": "/app",
     "budgetSeconds": 480,
     "startingData": "After a reset the workspace has 2 Production API keys: KEY-001 named \"Production LLM routing\" and KEY-002 named \"Staging verifier\". Active keys reads \"2 Keys\", Available quota reads \"$4,500.00\" and Action status reads \"SYSTEM_READY\"."
+  },
+  "guard": {
+    "enabled": true,
+    "allowNewTests": true,
+    "protect": [
+      "tests/**",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/__tests__/**",
+      "vitest.config.*",
+      "driftor.config.json",
+      "driftor.js",
+      "driftor_test.js",
+      "lib/heal.js",
+      "lib/select.js",
+      "lib/acceptance.js",
+      "lib/guard.js",
+      "lib/card.js",
+      "lib/regressions.js",
+      "kane-traces/**",
+      ".testmuai/**",
+      ".claude/settings*.json",
+      "policies/**",
+      ".github/workflows/**",
+      "scripts/ci.js",
+      "scripts/guard-demo.js",
+      "package.json"
+    ]
   },
   "objectives": [
     {

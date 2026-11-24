@@ -6,6 +6,9 @@
  *   node driftor.js gate --dry-run  # check config, kane-cli and app discovery; no browser, no credits
  *   node driftor.js init            # set Driftor up in another Next.js or Vite repo (scripts/init.js)
  *   node driftor.js --hook          # Claude Code Stop hook: gate the agent's edits, feed failures back
+ *                                   # (as a SessionStart hook it records the guard's starting point)
+ *   node driftor.js --guard         # the hook's first check, by hand: did the change edit the checks or
+ *                                   # hide what they click? (lib/guard.js; no browser, no credits)
  *   node driftor.js --heal          # send the failing Kane evidence to a coding agent, then re-verify
  *   node driftor.js --watch         # re-run the gate when watched source changes
  *   node driftor.js --inject [bug]  # ship a bug-zoo regression into the demo app (default: overlay)
@@ -29,6 +32,7 @@ const fs = require("fs");
 const path = require("path");
 const { parseNdjson, extractFindings, buildHealPrompt } = require("./lib/heal");
 const acceptance = require("./lib/acceptance");
+const guard = require("./lib/guard");
 // The bug zoo only exists in the Driftor repo; other projects don't need it.
 const zooModule = () => {
   try {
@@ -73,6 +77,7 @@ if (!fs.existsSync(path.join(ROOT, "driftor.config.json"))) {
 const CONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, "driftor.config.json"), "utf8"));
 const TRACE_DIR = path.join(ROOT, CONFIG.traceDir || "kane-traces");
 const STATE_FILE = path.join(ROOT, ".data", "driftor-hook.json");
+const GUARD_FILE = path.join(ROOT, ".data", "driftor-guard.json");
 const MAX_ATTEMPTS = CONFIG.maxHealAttempts || 3;
 
 const line = (c = "=") => console.log(c.repeat(78));
@@ -363,19 +368,145 @@ function describeDerived(d) {
   );
 }
 
+/* ── the guard: the agent can't mark its own homework (lib/guard.js) ──────── */
+
+function loadGuardState() {
+  try {
+    const g = JSON.parse(fs.readFileSync(GUARD_FILE, "utf8"));
+    return { baselines: g.baselines || {}, own: g.own || {}, last: g.last || {} };
+  } catch {
+    return { baselines: {}, own: {}, last: {} };
+  }
+}
+
+function saveGuardState(g) {
+  fs.mkdirSync(path.dirname(GUARD_FILE), { recursive: true });
+  fs.writeFileSync(GUARD_FILE, JSON.stringify(g, null, 2));
+}
+
+/** The bug zoo's swaps: an injection made before the session is the starting point, not the agent's change. */
+const zooInjections = () => {
+  try {
+    return Object.values(require("./lib/regressions").REGRESSIONS);
+  } catch {
+    return [];
+  }
+};
+
+/** SessionStart: remember what was already uncommitted, once per session (resume and compact keep the first). */
+function guardSessionStart(session) {
+  const g = loadGuardState();
+  if (g.baselines[session]) return;
+  const baseline = guard.recordBaseline(ROOT);
+  if (!baseline) return;
+  g.baselines[session] = baseline;
+  const keep = Object.entries(g.baselines).sort((a, b) => b[1].createdAt.localeCompare(a[1].createdAt)).slice(0, 5);
+  g.baselines = Object.fromEntries(keep);
+  saveGuardState(g);
+}
+
+/** Runs the guard for this session and archives the decision when there was something to judge. */
+function checkGuard({ session, requests, trigger }) {
+  const g = loadGuardState();
+  const result = guard.runGuard({
+    root: ROOT,
+    config: CONFIG,
+    baseline: g.baselines[session] || null,
+    own: g.own,
+    acceptanceTests: guard.acceptanceTestsFor(ROOT, requests),
+    injections: zooInjections(),
+  });
+  const digest = crypto
+    .createHash("sha1")
+    .update(JSON.stringify([result.verdict, result.violations, result.inspected.map((f) => [f, result.dirty && result.dirty[f]])]))
+    .digest("hex");
+  // Every block is archived; an allow when there was something to judge (once per distinct
+  // change) or when it clears an earlier block.
+  const prev = g.last[session] || {};
+  if (result.verdict === "block" || prev.verdict === "block" || (result.inspected.length && prev.digest !== digest)) {
+    result.archived = path.relative(ROOT, guard.archiveDecision(TRACE_DIR, result, { session, trigger }));
+    g.last = { [session]: { digest, verdict: result.verdict } };
+    saveGuardState(g);
+  }
+  return result;
+}
+
+/** After the hook: whatever changed since the guard looked was written by Driftor (evidence, logs), so excuse it while unchanged. */
+function recordOwnWrites(before, ref) {
+  const now = guard.dirtyHashes(ROOT, ref);
+  if (!now) return;
+  const g = loadGuardState();
+  for (const [f, h] of Object.entries(now)) if (h !== before[f]) g.own[f] = h;
+  saveGuardState(g);
+}
+
+/** Counts one more failed attempt for the session; null once MAX_ATTEMPTS is used up (the counter is reset). */
+function nextAttempt(state, session) {
+  const attempt = (state.attempts[session] || 0) + 1;
+  if (attempt > MAX_ATTEMPTS) delete state.attempts[session];
+  else state.attempts[session] = attempt;
+  saveState(state);
+  return attempt > MAX_ATTEMPTS ? null : attempt;
+}
+
+function cmdGuard() {
+  line();
+  console.log(" 🛡  DRIFTOR GUARD — did the change edit the checks, or hide what they click?");
+  line();
+  const session = after("--session");
+  const g = loadGuardState();
+  if (session && !g.baselines[session]) console.log(` • No baseline recorded for session ${session}; comparing with git HEAD.`);
+  const result = guard.runGuard({ root: ROOT, config: CONFIG, baseline: (session && g.baselines[session]) || null, own: g.own, injections: zooInjections() });
+  console.log(guard.printable(result).split("\n").map((l) => ` ${l}`).join("\n"));
+  if (result.verdict === "block") {
+    console.log("\n 📄 What the agent would be told (Stop hook block reason):\n");
+    console.log(guard.buildGuardPrompt(result, { attempt: 1, maxAttempts: MAX_ATTEMPTS }).split("\n").map((l) => `   │ ${l}`).join("\n"));
+  }
+  if (args.includes("--archive")) console.log(`\n Archived: ${path.relative(ROOT, guard.archiveDecision(TRACE_DIR, result, { trigger: "guard-cli" }))}`);
+  process.exit(result.verdict === "block" ? 1 : 0);
+}
+
 /**
  * Runs when Claude Code is about to end its turn. If the watched source changed
  * since the last green gate, run Kane. On failure, block the stop and hand Claude
  * the evidence (the same prompt `--heal` uses), so it keeps fixing in the same
  * session. After MAX_ATTEMPTS failures, let it stop and tell the human.
+ *
+ * Before any of that, the guard (no browser, no credits) refuses a change that
+ * edits the checks or hides what they click; that block counts as an attempt too.
  */
 async function cmdHook() {
   const input = readStdin();
   if (process.env.DRIFTOR_HOOK !== "1") return; // opt-in; see header comment
-  const out = (obj) => process.stdout.write(JSON.stringify(obj));
   const session = input.session_id || "manual";
+  if (input.hook_event_name === "SessionStart") return guardSessionStart(session);
 
+  // The task the agent was given, from the session transcript (lib/acceptance.js).
+  const requests = ACCEPT.enabled ? acceptance.requestsFromTranscript(input.transcript_path, ACCEPT) : [];
+  const verdict = checkGuard({ session, requests, trigger: "claude-stop-hook" });
+  try {
+    await stopHook({ session, requests, verdict });
+  } finally {
+    if (verdict.dirty) recordOwnWrites(verdict.dirty, verdict.ref);
+  }
+}
+
+async function stopHook({ session, requests, verdict }) {
+  const out = (obj) => process.stdout.write(JSON.stringify(obj));
   const state = loadState();
+
+  if (verdict.verdict === "block") {
+    const attempt = nextAttempt(state, session);
+    if (!attempt) {
+      out({
+        systemMessage: `Driftor: the guard still refuses the change after ${MAX_ATTEMPTS} attempts (${verdict.violations.length} violation(s), e.g. ${verdict.violations[0].file}). Stopping the loop — a human needs to look. Evidence: kane-traces/guard.log`,
+      });
+      return;
+    }
+    out({ decision: "block", reason: guard.buildGuardPrompt(verdict, { attempt, maxAttempts: MAX_ATTEMPTS }) });
+    return;
+  }
+
   const hash = fingerprint();
   if (hash === state.verified) return; // nothing changed since Kane last passed
 
@@ -393,8 +524,6 @@ async function cmdHook() {
   const selectEnv = changed ? { DRIFTOR_CHANGED_FILES: JSON.stringify(changed) } : {};
 
   process.stderr.write("Driftor: source changed — running the Kane gate in real Chrome…\n");
-  // The task the agent was given, from the session transcript (lib/acceptance.js).
-  const requests = ACCEPT.enabled ? acceptance.requestsFromTranscript(input.transcript_path, ACCEPT) : [];
   const { passed: gatePassed, output, derived } = await gateWithTask({ requests, appUrl, trigger: "claude-stop-hook", env: selectEnv });
   fs.mkdirSync(TRACE_DIR, { recursive: true });
   fs.appendFileSync(path.join(TRACE_DIR, "hook.log"), `\n# ${new Date().toISOString()} session ${session}\n${output}`);
@@ -423,17 +552,13 @@ async function cmdHook() {
     return;
   }
 
-  const attempt = (state.attempts[session] || 0) + 1;
-  if (attempt > MAX_ATTEMPTS) {
-    delete state.attempts[session];
-    saveState(state);
+  const attempt = nextAttempt(state, session);
+  if (!attempt) {
     out({
       systemMessage: `Driftor: Kane still fails after ${MAX_ATTEMPTS} fix attempts. Stopping the loop — a human needs to look. Evidence: kane-traces/`,
     });
     return;
   }
-  state.attempts[session] = attempt;
-  saveState(state);
 
   const parts = [];
   if (!gatePassed) {
@@ -608,6 +733,7 @@ const after = (f) => {
 };
 
 if (args.includes("--hook")) cmdHook();
+else if (args.includes("--guard")) cmdGuard();
 else if (args.includes("--accept")) cmdAccept(after("--accept"));
 else if (args.includes("--card")) cmdCard(after("--card"), after("--objective"));
 else if (args.includes("--inject")) cmdInject(after("--inject"));

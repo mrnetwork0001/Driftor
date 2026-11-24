@@ -41,6 +41,8 @@
     "driftor:init": "node driftor.js init",
     "driftor:accept": "node driftor.js --accept",
     "driftor:card": "node driftor.js --card",
+    "driftor:guard": "node driftor.js --guard",
+    "driftor:guard-demo": "node scripts/guard-demo.js",
     "agent": "DRIFTOR_HOOK=1 claude",
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"
