@@ -19,6 +19,11 @@
  * original window size afterwards. It also runs the unit suite (config.unit)
  * once, so every archived run records both verdicts side by side.
  *
+ * After a failed run it renders a "what the user saw" card per failing
+ * objective into the run folder (lib/card.js): Kane's screenshot of the failing
+ * step with the element Kane clicked outlined. Best effort: no Chrome or no
+ * evidence pack means no card, never a different verdict.
+ *
  * Selection (lib/select.js): with --changed, --files or DRIFTOR_CHANGED_FILES
  * (set by the Stop hook), only the objectives whose `covers` globs match a
  * changed file run. Shared and unknown files run everything; the archived
@@ -561,6 +566,29 @@ function archive({ startedAt, wallMs, allPassed, regression, unit, verdicts, sel
   fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(record, null, 2));
   // Read by the Stop hook to tell the agent what ran and what was skipped.
   fs.writeFileSync(path.join(TRACE_DIR, "selection.json"), JSON.stringify({ startedAt, ...record.selection, execution }, null, 2));
+  return runDir;
+}
+
+/**
+ * "What the user saw" cards for the failing objectives (lib/card.js), listed in
+ * run.json as `cards`. Best effort: never changes the gate's verdict or exit code.
+ */
+function makeCards(runDir) {
+  try {
+    const { makeCards: render } = require("./lib/card");
+    const results = render(runDir);
+    const cards = Object.fromEntries(results.filter((r) => r.card).map((r) => [r.id, path.basename(r.card)]));
+    for (const r of results) {
+      console.log(r.card ? ` ▣ Card: ${path.relative(ROOT, r.card)} (what the user saw at step ${r.step})` : ` · No card for ${r.id}: ${r.skipped}`);
+    }
+    if (Object.keys(cards).length) {
+      const file = path.join(runDir, "run.json");
+      const record = JSON.parse(fs.readFileSync(file, "utf8"));
+      fs.writeFileSync(file, JSON.stringify({ ...record, cards }, null, 2));
+    }
+  } catch (err) {
+    console.log(` · No evidence cards: ${err.message}`);
+  }
 }
 
 /**
@@ -720,7 +748,8 @@ async function main() {
   // Kane time only (excludes the unit suite): the number to compare sequential vs parallel by.
   execution.kaneWallMs = Date.now() - kaneStart;
   // Archive this run so earlier evidence survives the next run (e.g. the re-verify after a heal).
-  archive({ startedAt, wallMs, allPassed, regression, unit, verdicts, selection, execution });
+  const runDir = archive({ startedAt, wallMs, allPassed, regression, unit, verdicts, selection, execution });
+  if (!allPassed && process.env.DRIFTOR_CARDS !== "0") makeCards(runDir);
 
   line();
   const ran = Object.keys(verdicts).length;

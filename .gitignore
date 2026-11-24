@@ -9,6 +9,9 @@ kane-traces/latest.ndjson
 .next-build
 # Packs scripts/ci.js copies in for a verdict (large; CI uploads them as an artifact).
 kane-traces/runs/*/evidence/
+# "What the user saw" cards (lib/card.js) are committed next to their traces, so the
+# site and PR comments can show them; keep them even if a broader rule ignores PNGs.
+!kane-traces/runs/*/card-*.png
 # Acceptance checks derived from the agent's task: Kane's assurance store and designed tests.
 .driftor
 # Which objectives the last gate selected (runtime state).

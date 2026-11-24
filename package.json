@@ -27,6 +27,7 @@
     "driftor:check": "node driftor.js gate --dry-run",
     "driftor:init": "node driftor.js init",
     "driftor:accept": "node driftor.js --accept",
+    "driftor:card": "node driftor.js --card",
     "agent": "DRIFTOR_HOOK=1 claude",
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"
