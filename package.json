@@ -8,6 +8,18 @@
   "bin": {
     "driftor": "driftor.js"
   },
+  "files": [
+    "driftor.js",
+    "driftor_test.js",
+    "lib/heal.js",
+    "lib/select.js",
+    "lib/acceptance.js",
+    "lib/regressions.js",
+    "scripts/",
+    "kane-traces/runs/",
+    "kane-traces/agent-sessions/",
+    "!kane-traces/runs/*/evidence/"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +27,7 @@
     "lint": "next lint",
     "test:unit": "vitest run",
     "test:tooling": "node --test tests/tooling/*.test.js",
+    "demo": "node scripts/demo.js",
     "driftor": "node driftor.js",
     "driftor:gate": "node driftor.js gate",
     "driftor:test": "node driftor_test.js",
@@ -31,13 +44,6 @@
     "kane:login": "kane-cli login --oauth",
     "kane:balance": "kane-cli balance"
   },
-  "dependencies": {
-    "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.16.0",
-    "next": "14.2.5",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
@@ -47,8 +53,13 @@
     "@types/react": "^18.2.52",
     "@types/react-dom": "^18.2.19",
     "autoprefixer": "^10.4.17",
+    "canvas-confetti": "^1.9.4",
     "jsdom": "^25.0.1",
+    "lucide-react": "^1.16.0",
+    "next": "14.2.5",
     "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "vitest": "^2.1.9"
