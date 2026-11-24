@@ -5,9 +5,9 @@
  *   node driftor.js init [--dir <repo>] [--port <n>] [--force]
  *
  * It writes, in the target repo:
- *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance}.js   the runtime the hook runs
+ *   .driftor/driftor.js, .driftor/driftor_test.js, .driftor/lib/{heal,select,acceptance,redgreen}.js   the runtime the hooks run
  *   driftor.config.json        placeholder objectives to edit (kept if it exists, unless --force)
- *   .claude/settings.json      the Stop hook, merged into existing hooks; it only acts with DRIFTOR_HOOK=1
+ *   .claude/settings.json      the Stop and UserPromptSubmit hooks, merged into existing hooks; they only act with DRIFTOR_HOOK=1
  *   package.json scripts       driftor:gate, driftor:check, driftor:heal, driftor:watch, driftor:agent
  *   .gitignore                 Driftor's local state
  * The bug zoo, the reset endpoint and the unit command are optional and left off.
@@ -18,8 +18,10 @@ const path = require("path");
 
 const PKG_ROOT = path.join(__dirname, "..");
 // Everything driftor.js and driftor_test.js require at runtime (lib/regressions.js is optional).
-const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js"];
+const RUNTIME = ["driftor.js", "driftor_test.js", "lib/heal.js", "lib/select.js", "lib/acceptance.js", "lib/redgreen.js"];
 const HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --hook';
+// Red→green: designs the task's tests and runs them before the agent writes code (needs `acceptance` in the config).
+const PROMPT_HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.driftor/driftor.js" --prompt-hook';
 const IGNORE = ["kane-traces/latest.ndjson", "kane-traces/hook.log", ".data/driftor-hook.json", ".testmuai/evidence/"];
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
@@ -99,15 +101,27 @@ function starterConfig({ name, framework, port, basePath = "/", watch }) {
   };
 }
 
-/** Adds Driftor's Stop hook to .claude/settings.json without touching anything else. */
+/**
+ * Adds Driftor's hooks to .claude/settings.json without touching anything else:
+ * Stop (the gate) and UserPromptSubmit (the red run before the change).
+ */
 function mergeHook(file) {
   const settings = fs.existsSync(file) ? readJson(file) : {};
   settings.hooks = settings.hooks || {};
-  const stop = (settings.hooks.Stop = settings.hooks.Stop || []);
-  const present = stop.some((group) => (group.hooks || []).some((h) => typeof h.command === "string" && h.command.includes("driftor.js") && h.command.includes("--hook")));
-  if (!present) stop.push({ hooks: [{ type: "command", command: HOOK_COMMAND, timeout: 900 }] });
+  let added = false;
+  for (const [event, flag, command] of [
+    ["Stop", /--hook\b/, HOOK_COMMAND],
+    ["UserPromptSubmit", /--prompt-hook\b/, PROMPT_HOOK_COMMAND],
+  ]) {
+    const groups = (settings.hooks[event] = settings.hooks[event] || []);
+    const present = groups.some((group) => (group.hooks || []).some((h) => typeof h.command === "string" && h.command.includes("driftor.js") && flag.test(h.command)));
+    if (!present) {
+      groups.push({ hooks: [{ type: "command", command, timeout: 900 }] });
+      added = true;
+    }
+  }
   writeJson(file, settings);
-  return present ? "already there" : "added";
+  return added ? "added" : "already there";
 }
 
 function addScripts(file) {
@@ -182,7 +196,7 @@ function main(argv = []) {
     log(`✓ driftor.config.json written with 2 placeholder objectives (watching ${found.watch.join(", ")})`);
   }
 
-  log(`✓ Stop hook ${mergeHook(path.join(dir, ".claude", "settings.json"))} in .claude/settings.json (acts only with DRIFTOR_HOOK=1)`);
+  log(`✓ Stop + UserPromptSubmit hooks ${mergeHook(path.join(dir, ".claude", "settings.json"))} in .claude/settings.json (act only with DRIFTOR_HOOK=1; the red→green run also needs "acceptance" in driftor.config.json)`);
   const scripts = addScripts(path.join(dir, "package.json"));
   log(scripts.length ? `✓ npm scripts added: ${scripts.join(", ")}` : "• npm scripts already present");
   const ignores = addIgnores(path.join(dir, ".gitignore"));
