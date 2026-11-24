@@ -42,9 +42,17 @@ function Unit({ run }: { run?: RunSummary }) {
   );
 }
 
-/** Latest archived run whose live regressions are exactly [name] (or none, for "healthy"). */
+/**
+ * Latest archived CLI run whose live regressions are exactly [name] (or none, for "healthy").
+ * Agent-session runs are left out: the agent changed the app in them, so they aren't the zoo's baseline.
+ */
 function latestFor(runs: RunSummary[], name: string | null) {
-  return runs.find((r) => r.regression && (name ? r.regression.length === 1 && r.regression[0] === name : r.regression.length === 0));
+  return runs.find(
+    (r) =>
+      r.trigger === "cli" &&
+      r.regression &&
+      Object.values(r.objectives).filter((o) => o.verdict === "passed" || o.verdict === "failed").length >= 2 && (name ? r.regression.length === 1 && r.regression[0] === name : r.regression.length === 0),
+  );
 }
 
 export function BugZoo() {
@@ -116,6 +124,7 @@ const TRIGGER: Record<string, string> = {
   "heal-verify": "re-verify after heal",
   watch: "file watcher",
   cli: "driftor:gate",
+  "accept-cli": "driftor:accept",
 };
 
 /** Every archived gate run, newest first. */
@@ -133,20 +142,21 @@ export function RunLog({ limit = 12 }: { limit?: number }) {
             <th className="px-4 py-2 font-normal">unit</th>
             <th className="px-4 py-2 font-normal">desktop</th>
             <th className="px-4 py-2 font-normal">narrow</th>
+            <th className="px-4 py-2 font-normal" title="tests Kane designed from the agent's task">from task</th>
             <th className="px-4 py-2 font-normal">gate</th>
           </tr>
         </thead>
         <tbody>
           {!data && (
             <tr>
-              <td colSpan={7} className="px-4 py-4 text-graphite">
+              <td colSpan={8} className="px-4 py-4 text-graphite">
                 reading kane-traces/…
               </td>
             </tr>
           )}
           {data && !runs.length && (
             <tr>
-              <td colSpan={7} className="px-4 py-4 text-graphite">
+              <td colSpan={8} className="px-4 py-4 text-graphite">
                 No gate runs archived yet.
               </td>
             </tr>
@@ -166,7 +176,16 @@ export function RunLog({ limit = 12 }: { limit?: number }) {
                   <Verdict v={r.objectives[o.id]?.verdict} />
                 </td>
               ))}
-              <td className={`px-4 py-2.5 ${r.passed ? "text-pass" : "text-signal"}`}>{r.passed ? "passed" : "failed"}</td>
+              <td className="px-4 py-2.5 whitespace-nowrap">
+                {r.acceptance ? (
+                  <span className={r.acceptance.passed ? "text-pass" : "text-signal"}>
+                    {r.acceptance.passed ? "✓" : "✗"} {r.acceptance.passedCount}/{r.acceptance.total}
+                  </span>
+                ) : (
+                  <span className="text-graphite">—</span>
+                )}
+              </td>
+              <td className={`px-4 py-2.5 ${r.overallPassed ? "text-pass" : "text-signal"}`}>{r.overallPassed ? "passed" : "failed"}</td>
             </tr>
           ))}
         </tbody>

@@ -43,6 +43,10 @@ export interface RunSummary {
   regression: string[] | null;
   unit: { command: string; passed: boolean; summary: string | null } | null;
   objectives: Record<string, { verdict: string; viewport?: string; title?: string }>;
+  /** Tests Kane designed from the agent's task, if the run had any. */
+  acceptance: { passed: boolean; total: number; passedCount: number } | null;
+  /** Standing objectives and acceptance tests together (falls back to `passed`). */
+  overallPassed: boolean;
 }
 
 export interface SessionStep {
@@ -139,6 +143,17 @@ function lastFailingRun(): FailingRun | null {
   return null;
 }
 
+function summarizeAcceptance(a: unknown): RunSummary["acceptance"] {
+  if (!a || typeof a !== "object") return null;
+  const checks = Object.values((a as { checks?: Record<string, { verdict?: string }> }).checks ?? {});
+  if (!checks.length) return null;
+  return {
+    passed: !!(a as { passed?: boolean }).passed,
+    total: checks.length,
+    passedCount: checks.filter((c) => c.verdict === "passed").length,
+  };
+}
+
 function listRuns(): RunSummary[] {
   const runsDir = path.join(TRACE_DIR, "runs");
   if (!fs.existsSync(runsDir)) return [];
@@ -154,6 +169,8 @@ function listRuns(): RunSummary[] {
         regression: Array.isArray(m.regression) ? m.regression : null,
         unit: m.unit ?? null,
         objectives: m.objectives ?? {},
+        acceptance: summarizeAcceptance(m.acceptance),
+        overallPassed: typeof m.overallPassed === "boolean" ? m.overallPassed : !!m.passed,
       });
     } catch {
       /* incomplete run */
