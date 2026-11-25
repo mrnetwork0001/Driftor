@@ -1,7 +1,7 @@
 # Driftor: Kane CLI Online Hackathon submission
 
 **Repository:** https://github.com/mrnetwork0001/Driftor
-**Demo video (≤ 3 min, unlisted):** _add link_
+**Demo video (2:57):** https://youtu.be/9YAR9E224xU
 **Live URL:** https://trydriftor.vercel.app (the landing, the CloudScale demo app at /app and the traces at /hud). Locally: `npm install && npm run dev`, then open http://localhost:3000
 **Agent:** Claude Code (Stop hook). `driftor:heal` falls back to Gemini CLI.
 

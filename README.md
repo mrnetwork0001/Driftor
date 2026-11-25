@@ -4,7 +4,7 @@
 
 Coding agents check their own UI work with unit tests that run in JSDOM, a simulated browser that builds the page but never draws it. A button covered by an invisible layer, or a label that disappears on a narrow screen, passes every one of those tests. Driftor blocks the agent's turn, has Kane CLI check the app in real Chrome at desktop and narrow sizes, and sends any failure back to the agent to fix. Everything is measured by one comparison: **on the five bugs in this repo, the unit tests caught 0 of 5 and Kane in real Chrome caught 5 of 5.**
 
-Built for the Kane CLI Online Hackathon (TestMu AI, November 2026) · App: [trydriftor.vercel.app](https://trydriftor.vercel.app) · Demo video: `<VIDEO_URL>` · Code: [github.com/mrnetwork0001/Driftor](https://github.com/mrnetwork0001/Driftor)
+Built for the Kane CLI Online Hackathon (TestMu AI, November 2026) · App: [trydriftor.vercel.app](https://trydriftor.vercel.app) · Demo video: [youtu.be/9YAR9E224xU](https://youtu.be/9YAR9E224xU) · Code: [github.com/mrnetwork0001/Driftor](https://github.com/mrnetwork0001/Driftor)
 
 **Judges, start here:** run `npx -y github:mrnetwork0001/Driftor demo`. It needs no Kane account, no credits and no browser. In about 20 seconds it replays real archived runs from this repo: Kane catching a bug the unit tests missed, Claude fixing it, the tests Kane designed for a new feature, and the bug zoo table. Every line it prints is read from a file in [`kane-traces/`](kane-traces/).
 
