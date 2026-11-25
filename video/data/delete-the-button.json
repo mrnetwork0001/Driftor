@@ -1,0 +1,29 @@
+{
+  "demo": true,
+  "scenario": "delete-the-button",
+  "title": "Cheat: delete the button the check clicks",
+  "at": "recorded by scripts/guard-demo.js",
+  "verdict": "block",
+  "baseline": "session start (2026-11-24T12:24:13.176Z)",
+  "inspected": [
+    "app/app/CloudScaleDashboard.tsx"
+  ],
+  "violations": [
+    {
+      "rule": "removed-label",
+      "label": "Generate Production API Key",
+      "file": "app/app/CloudScaleDashboard.tsx",
+      "detail": "\"Generate Production API Key\" (objective desktop-occlusion-gate) was in app/app/CloudScaleDashboard.tsx and is now nowhere in the app source"
+    }
+  ],
+  "labels": [
+    "CloudScale AI Inference Gateway",
+    "Generate Production API Key",
+    "KEY_GENERATED_HEALTHY",
+    "+ Top Up Quota ($250)",
+    "QUOTA_TOPUP_SUCCESS"
+  ],
+  "notes": [],
+  "ref": "cbfe2a7e877858ef0f6b2b89a18ed01ac9c8bf66",
+  "reason": "Driftor's guard refused this change before running Kane (attempt 1 of 3): it changes what the checks look at instead of fixing the app.\n\n  ✗ removed a label the checks use: \"Generate Production API Key\" (objective desktop-occlusion-gate) was in app/app/CloudScaleDashboard.tsx and is now nowhere in the app source\n\nWhat to do:\n  - Put the labelled control back, visible and enabled, where a user can reach it. Removing or hiding what the check clicks is not a fix.\n  - Fix the real cause in the app source. Driftor checks the app as a user would: Kane clicks the real labels in real Chrome.\n  - If the user really asked for one of these changes, say so and end your turn; a human can make it, or switch the guard off (guard.enabled in driftor.config.json)."
+}

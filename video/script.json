@@ -1,0 +1,171 @@
+{
+  "title": "Driftor: done is a claim, prove it",
+  "model": "eleven_multilingual_v2",
+  "voices": {
+    "narrator": {
+      "name": "Chinedu Dike (ElevenLabs Voice Library: warm, clear Nigerian English male narrator)",
+      "id": "3W7TIElBzp1JQ8BxQuXK",
+      "settings": {
+        "stability": 0.5,
+        "similarity_boost": 0.8,
+        "style": 0.25,
+        "use_speaker_boost": true,
+        "speed": 1.07
+      }
+    },
+    "kane": {
+      "name": "River (ElevenLabs premade: neutral, calm) - Kane CLI's real verdict, terminal EQ in vofx.mjs",
+      "id": "SAz9YHcvj6GT2YYXdXww",
+      "settings": {
+        "stability": 0.6,
+        "similarity_boost": 0.75,
+        "style": 0.1,
+        "use_speaker_boost": true
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "open",
+      "seconds": 11,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Twenty-seven unit tests passed. The agent said done. But in real Chrome, the main button on the page could not be clicked."
+        }
+      ]
+    },
+    {
+      "id": "problem",
+      "seconds": 12,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Coding agents check their work with unit tests, in a pretend browser. No layout. No layers. No cache. So the bugs your users hit walk straight through."
+        }
+      ]
+    },
+    {
+      "id": "zoo",
+      "seconds": 17,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "We proved it with a bug zoo. Five one-line bugs an agent could ship. A layer that steals clicks. A link hidden on small screens. A page with stale numbers. Unit tests caught zero of five. Kane caught all five."
+        }
+      ]
+    },
+    {
+      "id": "turn",
+      "seconds": 8,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "This is Driftor. Done is a claim. Driftor makes the agent prove it.",
+          "say": "This is Drifter. Done is a claim. Drifter makes the agent prove it."
+        }
+      ]
+    },
+    {
+      "id": "kane",
+      "seconds": 16,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Driftor runs on Kane CLI, from TestMu AI, formerly LambdaTest. Kane reads plain English, drives real Chrome, and seals every step into an evidence pack. Behind it, a platform with three million users and fifty thousand real devices.",
+          "say": "Drifter runs on Kane CLI, from Test-Mew AI, formerly LambdaTest. Kane reads plain English, drives real Chrome, and seals every step into an evidence pack. Behind it, a platform with three million users and fifty thousand real devices."
+        }
+      ]
+    },
+    {
+      "id": "hooks",
+      "seconds": 15,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Driftor plugs into Claude Code as hooks. When the agent says done, Kane clicks through the user flows its change can touch, on wide and narrow screens. If one breaks, the agent goes back to fix it.",
+          "say": "Drifter plugs into Claude Code as hooks. When the agent says done, Kane clicks through the user flows its change can touch, on wide and narrow screens. If one breaks, the agent goes back to fix it."
+        }
+      ]
+    },
+    {
+      "id": "red",
+      "seconds": 16,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "It also writes the tests first. In a live session, we asked Claude for a Revoke button. Before a line of code, Kane designed two tests from that request, and ran them."
+        },
+        {
+          "voice": "kane",
+          "text": "Checkpoint assertion failed. KEY-001 has a Revoke button.",
+          "say": "Checkpoint assertion failed. Key zero zero one has a Revoke button."
+        }
+      ]
+    },
+    {
+      "id": "green",
+      "seconds": 13,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Red, as it should be. Claude built the feature. Kane ran the same two tests again. Both passed. Red to green, with a receipt to prove it."
+        }
+      ]
+    },
+    {
+      "id": "guard",
+      "seconds": 14,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "But a stuck agent might cheat, and weaken the test instead of fixing the app. Driftor's guard watches every protected file. In our replay, it blocked four cheats, and let the real fix through.",
+          "say": "But a stuck agent might cheat, and weaken the test instead of fixing the app. Drifter's guard watches every protected file. In our replay, it blocked four cheats, and let the real fix through."
+        }
+      ]
+    },
+    {
+      "id": "saw",
+      "seconds": 12,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "When a check fails, nobody digs through logs. Driftor turns Kane's evidence into one card. What the user saw, the step, and why.",
+          "say": "When a check fails, nobody digs through logs. Drifter turns Kane's evidence into one card. What the user saw, the step, and why."
+        }
+      ]
+    },
+    {
+      "id": "tour",
+      "seconds": 14,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Every run is archived. The site shows each bug in the zoo, every verdict, and the card behind it. And one command runs the whole demo, no account needed."
+        }
+      ]
+    },
+    {
+      "id": "unique",
+      "seconds": 13,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "A transcript tells you what an agent did. Driftor decides whether it gets to stop. Tests from the task. Red before green. A guard on the tests. And real Chrome as the judge.",
+          "say": "A transcript tells you what an agent did. Drifter decides whether it gets to stop. Tests from the task. Red before green. A guard on the tests. And real Chrome as the judge."
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "seconds": 11,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Driftor. Done is a claim. Prove it. Built with Claude Code and Kane CLI, for the Kane CLI hackathon.",
+          "say": "Drifter. Done is a claim. Prove it. Built with Claude Code and Kane CLI, for the Kane CLI hackathon."
+        }
+      ]
+    }
+  ]
+}

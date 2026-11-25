@@ -1,0 +1,136 @@
+{
+ "app": {
+  "file": "footage/app.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 396,
+  "marks": {
+   "app.cookies": 103,
+   "app.toKey": 118,
+   "app.key": 158,
+   "app.toTopup": 236,
+   "app.topup": 276
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app/app",
+  "rects": {}
+ },
+ "card": {
+  "file": "footage/card.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 138,
+  "marks": {},
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app/api/cards?run=2026-11-23T23-22-51-442Z&objective=desktop-occlusion-gate",
+  "rects": {}
+ },
+ "hero": {
+  "file": "footage/hero.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 393,
+  "marks": {
+   "hero.scroll": 78,
+   "hero.fig": 179,
+   "hero.healed": 269
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app",
+  "rects": {
+   "fig": {
+    "x": 633,
+    "y": 107,
+    "w": 966,
+    "h": 636
+   }
+  }
+ },
+ "hud": {
+  "file": "footage/hud.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 240,
+  "marks": {},
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app/hud",
+  "rects": {}
+ },
+ "loop": {
+  "file": "footage/loop.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 366,
+  "marks": {
+   "loop.scroll": 72,
+   "loop.replay": 189
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app/#loop",
+  "rects": {
+   "replay": null
+  }
+ },
+ "revoke": {
+  "file": "footage/revoke.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 183,
+  "marks": {
+   "revoke.toBtn": 49,
+   "revoke.click": 89
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "localhost:3004/app",
+  "rects": {}
+ },
+ "zoo": {
+  "file": "footage/zoo.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 293,
+  "marks": {
+   "zoo.scroll": 96,
+   "zoo.table": 219,
+   "zoo.hover": 262
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "url": "trydriftor.vercel.app/#verdicts",
+  "rects": {
+   "table": {
+    "x": 0,
+    "y": -40,
+    "w": 1600,
+    "h": 1125
+   }
+  }
+ }
+}

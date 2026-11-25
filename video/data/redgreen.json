@@ -1,0 +1,76 @@
+{
+  "kind": "driftor-redgreen-receipt",
+  "task": "Add a Revoke button to each API key in the CloudScale dashboard. Clicking it removes that key from the list, and the Active keys count goes down by one. It has to work on narrow phone-sized screens too.",
+  "session": "3409d762-5068-4c91-994b-5c74b970c9fa",
+  "designedAt": "2026-11-24T18:50:12.976Z",
+  "beforeAt": "2026-11-24T18:54:47.715Z",
+  "afterAt": "2026-11-24T19:07:52.749Z",
+  "review": "unreviewed: designed by Kane CLI from the task, never reviewed or promoted to trusted",
+  "summary": {
+    "tests": 2,
+    "proven": 2,
+    "stillFailing": 0,
+    "regressed": 0,
+    "regressionChecks": 0,
+    "noProof": 0,
+    "verdict": "proven"
+  },
+  "rows": [
+    {
+      "id": "t-2",
+      "title": "Revoke KEY-001 from CloudScale desktop and check its absence",
+      "before": "failed",
+      "after": "passed",
+      "label": "red→green",
+      "outcome": "proven",
+      "blocks": false,
+      "beforeFailure": "Checkpoint assertion failed: \"KEY-001 has a Revoke button\"",
+      "beforeStep": 2
+    },
+    {
+      "id": "t-1",
+      "title": "Revoke KEY-002 from CloudScale on a narrow phone-sized browser viewport",
+      "before": "failed",
+      "after": "passed",
+      "label": "red→green",
+      "outcome": "proven",
+      "blocks": false,
+      "beforeFailure": "The production table contains KEY-001 and KEY-002 but no Revoke buttons, and the viewport is 1920px rather than phone-sized.",
+      "beforeStep": 2
+    }
+  ],
+  "credits": {
+    "design": 21.23,
+    "before": 104.38,
+    "after": 107.72
+  },
+  "run": "kane-traces/runs/2026-11-24T19-01-47-356Z",
+  "before": [
+    {
+      "id": "t-2",
+      "title": "Revoke KEY-001 from CloudScale desktop and check its absence",
+      "summary": "From the reset CloudScale dashboard on a desktop web viewport, revoke KEY-001 and establish the negative membership result: KEY-001 is absent while Active keys decreases by one.",
+      "verdict": "failed",
+      "redGreen": "red",
+      "failure": {
+        "message": "Checkpoint assertion failed: \"KEY-001 has a Revoke button\"",
+        "step_index": 2
+      },
+      "duration_s": 99,
+      "trace": "redgreen-before/task-t-2.ndjson"
+    },
+    {
+      "id": "t-1",
+      "title": "Revoke KEY-002 from CloudScale on a narrow phone-sized browser viewport",
+      "summary": "From the reset CloudScale dashboard in a narrow phone-sized web viewport, revoke KEY-002, observe that the selected row is gone and Active keys falls by one.",
+      "verdict": "failed",
+      "redGreen": "red",
+      "failure": {
+        "message": "The production table contains KEY-001 and KEY-002 but no Revoke buttons, and the viewport is 1920px rather than phone-sized.",
+        "step_index": 2
+      },
+      "duration_s": 70,
+      "trace": "redgreen-before/task-t-1.ndjson"
+    }
+  ]
+}

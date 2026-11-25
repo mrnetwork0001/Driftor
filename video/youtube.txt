@@ -1,0 +1,34 @@
+TITLE
+Driftor: "Done" is a claim. Prove it. (Kane CLI hackathon demo)
+
+DESCRIPTION
+AI coding agents say "done" when the unit tests pass. But unit tests run in a pretend browser, so the bugs your users hit walk straight through. In our bug zoo, unit tests caught 0 of 5 real-browser bugs. Kane CLI, in real Chrome, caught all 5.
+
+Driftor plugs into Claude Code as hooks and makes the agent prove its work in a real browser before it can stop:
+- Tests from the task: Kane CLI designs acceptance tests from your request and runs them before any code is written (red), then again after (green).
+- A guard that blocks the agent from weakening or deleting tests instead of fixing the app.
+- A "what the user saw" card from Kane's evidence: the screenshot, the failed step and why.
+
+Everything in this film is real: the live Claude Code session of 2026-11-24 (both Kane tests failed before the change and passed after), the bug zoo runs of 2026-11-23, the guard replay and Kane CLI's own screenshots and verdicts.
+
+Live app: https://trydriftor.vercel.app
+Code: https://github.com/mrnetwork0001/Driftor
+Try it, no account needed: npx -y github:mrnetwork0001/Driftor demo
+
+Built with Claude Code and Kane CLI by TestMu AI (formerly LambdaTest), for the Kane CLI hackathon.
+#KaneCLIHackathon #KaneCLI #AIAgents
+
+CHAPTERS
+0:00 27 tests passed, the button did not work
+0:11 Why unit tests miss it
+0:24 The bug zoo: 0 of 5 vs 5 of 5
+0:42 Meet Driftor
+0:50 Why Kane CLI and TestMu AI
+1:07 How it plugs into Claude Code
+1:22 Live session: red
+1:39 Live session: green
+1:52 The guard
+2:06 What the user saw
+2:18 The site and the one-command demo
+2:30 What makes it different
+2:44 Close

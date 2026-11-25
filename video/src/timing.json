@@ -1,0 +1,2522 @@
+{
+ "fps": 30,
+ "totalFrames": 5310,
+ "bpm": 124.5,
+ "beats": [
+  6,
+  20,
+  35,
+  49,
+  64,
+  78,
+  93,
+  107,
+  122,
+  136,
+  151,
+  165,
+  179,
+  194,
+  208,
+  223,
+  237,
+  252,
+  266,
+  281,
+  295,
+  310,
+  324,
+  339,
+  353,
+  367,
+  382,
+  396,
+  411,
+  425,
+  440,
+  454,
+  469,
+  483,
+  498,
+  512,
+  526,
+  541,
+  555,
+  570,
+  584,
+  599,
+  613,
+  628,
+  642,
+  657,
+  671,
+  686,
+  700,
+  714,
+  729,
+  743,
+  758,
+  772,
+  787,
+  801,
+  816,
+  830,
+  845,
+  859,
+  873,
+  888,
+  902,
+  917,
+  931,
+  946,
+  960,
+  975,
+  989,
+  1004,
+  1018,
+  1033,
+  1047,
+  1061,
+  1076,
+  1090,
+  1105,
+  1119,
+  1134,
+  1148,
+  1163,
+  1177,
+  1192,
+  1206,
+  1220,
+  1235,
+  1249,
+  1264,
+  1278,
+  1293,
+  1307,
+  1322,
+  1336,
+  1351,
+  1365,
+  1379,
+  1394,
+  1408,
+  1423,
+  1437,
+  1452,
+  1466,
+  1481,
+  1495,
+  1510,
+  1524,
+  1539,
+  1553,
+  1567,
+  1582,
+  1596,
+  1611,
+  1625,
+  1640,
+  1654,
+  1669,
+  1683,
+  1698,
+  1712,
+  1726,
+  1741,
+  1755,
+  1770,
+  1784,
+  1799,
+  1813,
+  1828,
+  1842,
+  1857,
+  1871,
+  1886,
+  1900,
+  1914,
+  1929,
+  1943,
+  1958,
+  1972,
+  1987,
+  2001,
+  2016,
+  2030,
+  2045,
+  2059,
+  2073,
+  2088,
+  2102,
+  2117,
+  2131,
+  2146,
+  2160,
+  2175,
+  2189,
+  2204,
+  2218,
+  2233,
+  2247,
+  2261,
+  2276,
+  2290,
+  2305,
+  2319,
+  2334,
+  2348,
+  2363,
+  2377,
+  2392,
+  2406,
+  2420,
+  2435,
+  2449,
+  2464,
+  2478,
+  2493,
+  2507,
+  2522,
+  2536,
+  2551,
+  2565,
+  2579,
+  2594,
+  2608,
+  2623,
+  2637,
+  2652,
+  2666,
+  2681,
+  2695,
+  2710,
+  2724,
+  2739,
+  2753,
+  2767,
+  2782,
+  2796,
+  2811,
+  2825,
+  2840,
+  2854,
+  2869,
+  2883,
+  2898,
+  2912,
+  2926,
+  2941,
+  2955,
+  2970,
+  2984,
+  2999,
+  3013,
+  3028,
+  3042,
+  3057,
+  3071,
+  3086,
+  3100,
+  3114,
+  3129,
+  3143,
+  3158,
+  3172,
+  3187,
+  3201,
+  3216,
+  3230,
+  3245,
+  3259,
+  3273,
+  3288,
+  3302,
+  3317,
+  3331,
+  3346,
+  3360,
+  3375,
+  3389,
+  3404,
+  3418,
+  3433,
+  3447,
+  3461,
+  3476,
+  3490,
+  3505,
+  3519,
+  3534,
+  3548,
+  3563,
+  3577,
+  3592,
+  3606,
+  3620,
+  3635,
+  3649,
+  3664,
+  3678,
+  3693,
+  3707,
+  3722,
+  3736,
+  3751,
+  3765,
+  3779,
+  3794,
+  3808,
+  3823,
+  3837,
+  3852,
+  3866,
+  3881,
+  3895,
+  3910,
+  3924,
+  3939,
+  3953,
+  3967,
+  3982,
+  3996,
+  4011,
+  4025,
+  4040,
+  4054,
+  4069,
+  4083,
+  4098,
+  4112,
+  4126,
+  4141,
+  4155,
+  4170,
+  4184,
+  4199,
+  4213,
+  4228,
+  4242,
+  4257,
+  4271,
+  4286,
+  4300,
+  4314,
+  4329,
+  4343,
+  4358,
+  4372,
+  4387,
+  4401,
+  4416,
+  4430,
+  4445,
+  4459,
+  4473,
+  4488,
+  4502,
+  4517,
+  4531,
+  4546,
+  4560,
+  4575,
+  4589,
+  4604,
+  4618,
+  4633,
+  4647,
+  4661,
+  4676,
+  4690,
+  4705,
+  4719,
+  4734,
+  4748,
+  4763,
+  4777,
+  4792,
+  4806,
+  4820,
+  4835,
+  4849,
+  4864,
+  4878,
+  4893,
+  4907,
+  4922,
+  4936,
+  4951,
+  4965,
+  4979,
+  4994,
+  5008,
+  5023,
+  5037,
+  5052,
+  5066,
+  5081,
+  5095,
+  5110,
+  5124,
+  5139,
+  5153,
+  5167,
+  5182,
+  5196,
+  5211,
+  5225,
+  5240,
+  5254,
+  5269,
+  5283,
+  5298
+ ],
+ "music": {
+  "file": "audio/music.mp3",
+  "source": "elevenlabs-music"
+ },
+ "scenes": [
+  {
+   "id": "open",
+   "from": 0,
+   "durationInFrames": 330,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Twenty-seven unit tests passed. The agent said done. But in real Chrome, the main button on the page could not be clicked.",
+     "file": "audio/vo/open_0.mp3",
+     "startFrame": 8,
+     "durationFrames": 263,
+     "words": [
+      {
+       "word": "Twenty-seven",
+       "start": 8,
+       "end": 35
+      },
+      {
+       "word": "unit",
+       "start": 37,
+       "end": 44
+      },
+      {
+       "word": "tests",
+       "start": 45,
+       "end": 56
+      },
+      {
+       "word": "passed.",
+       "start": 58,
+       "end": 74
+      },
+      {
+       "word": "The",
+       "start": 84,
+       "end": 88
+      },
+      {
+       "word": "agent",
+       "start": 89,
+       "end": 99
+      },
+      {
+       "word": "said",
+       "start": 100,
+       "end": 107
+      },
+      {
+       "word": "done.",
+       "start": 110,
+       "end": 124
+      },
+      {
+       "word": "But",
+       "start": 139,
+       "end": 145
+      },
+      {
+       "word": "in",
+       "start": 147,
+       "end": 150
+      },
+      {
+       "word": "real",
+       "start": 152,
+       "end": 159
+      },
+      {
+       "word": "Chrome,",
+       "start": 161,
+       "end": 175
+      },
+      {
+       "word": "the",
+       "start": 180,
+       "end": 184
+      },
+      {
+       "word": "main",
+       "start": 187,
+       "end": 193
+      },
+      {
+       "word": "button",
+       "start": 195,
+       "end": 205
+      },
+      {
+       "word": "on",
+       "start": 208,
+       "end": 212
+      },
+      {
+       "word": "the",
+       "start": 213,
+       "end": 215
+      },
+      {
+       "word": "page",
+       "start": 218,
+       "end": 229
+      },
+      {
+       "word": "could",
+       "start": 232,
+       "end": 240
+      },
+      {
+       "word": "not",
+       "start": 241,
+       "end": 245
+      },
+      {
+       "word": "be",
+       "start": 247,
+       "end": 249
+      },
+      {
+       "word": "clicked.",
+       "start": 250,
+       "end": 271
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "problem",
+   "from": 330,
+   "durationInFrames": 394,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Coding agents check their work with unit tests, in a pretend browser. No layout. No layers. No cache. So the bugs your users hit walk straight through.",
+     "file": "audio/vo/problem_0.mp3",
+     "startFrame": 338,
+     "durationFrames": 378,
+     "words": [
+      {
+       "word": "Coding",
+       "start": 338,
+       "end": 349
+      },
+      {
+       "word": "agents",
+       "start": 352,
+       "end": 364
+      },
+      {
+       "word": "check",
+       "start": 367,
+       "end": 374
+      },
+      {
+       "word": "their",
+       "start": 376,
+       "end": 381
+      },
+      {
+       "word": "work",
+       "start": 383,
+       "end": 389
+      },
+      {
+       "word": "with",
+       "start": 391,
+       "end": 396
+      },
+      {
+       "word": "unit",
+       "start": 399,
+       "end": 407
+      },
+      {
+       "word": "tests,",
+       "start": 408,
+       "end": 426
+      },
+      {
+       "word": "in",
+       "start": 438,
+       "end": 442
+      },
+      {
+       "word": "a",
+       "start": 444,
+       "end": 445
+      },
+      {
+       "word": "pretend",
+       "start": 448,
+       "end": 460
+      },
+      {
+       "word": "browser.",
+       "start": 462,
+       "end": 479
+      },
+      {
+       "word": "No",
+       "start": 493,
+       "end": 498
+      },
+      {
+       "word": "layout.",
+       "start": 500,
+       "end": 518
+      },
+      {
+       "word": "No",
+       "start": 527,
+       "end": 533
+      },
+      {
+       "word": "layers.",
+       "start": 535,
+       "end": 553
+      },
+      {
+       "word": "No",
+       "start": 565,
+       "end": 570
+      },
+      {
+       "word": "cache.",
+       "start": 573,
+       "end": 589
+      },
+      {
+       "word": "So",
+       "start": 606,
+       "end": 615
+      },
+      {
+       "word": "the",
+       "start": 622,
+       "end": 626
+      },
+      {
+       "word": "bugs",
+       "start": 628,
+       "end": 637
+      },
+      {
+       "word": "your",
+       "start": 638,
+       "end": 644
+      },
+      {
+       "word": "users",
+       "start": 646,
+       "end": 656
+      },
+      {
+       "word": "hit",
+       "start": 660,
+       "end": 667
+      },
+      {
+       "word": "walk",
+       "start": 671,
+       "end": 681
+      },
+      {
+       "word": "straight",
+       "start": 683,
+       "end": 695
+      },
+      {
+       "word": "through.",
+       "start": 696,
+       "end": 716
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "zoo",
+   "from": 724,
+   "durationInFrames": 529,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "We proved it with a bug zoo. Five one-line bugs an agent could ship. A layer that steals clicks. A link hidden on small screens. A page with stale numbers. Unit tests caught zero of five. Kane caught all five.",
+     "file": "audio/vo/zoo_0.mp3",
+     "startFrame": 732,
+     "durationFrames": 514,
+     "words": [
+      {
+       "word": "We",
+       "start": 732,
+       "end": 737
+      },
+      {
+       "word": "proved",
+       "start": 739,
+       "end": 749
+      },
+      {
+       "word": "it",
+       "start": 751,
+       "end": 756
+      },
+      {
+       "word": "with",
+       "start": 759,
+       "end": 765
+      },
+      {
+       "word": "a",
+       "start": 766,
+       "end": 767
+      },
+      {
+       "word": "bug",
+       "start": 769,
+       "end": 776
+      },
+      {
+       "word": "zoo.",
+       "start": 778,
+       "end": 792
+      },
+      {
+       "word": "Five",
+       "start": 804,
+       "end": 816
+      },
+      {
+       "word": "one-line",
+       "start": 817,
+       "end": 831
+      },
+      {
+       "word": "bugs",
+       "start": 832,
+       "end": 842
+      },
+      {
+       "word": "an",
+       "start": 844,
+       "end": 848
+      },
+      {
+       "word": "agent",
+       "start": 851,
+       "end": 861
+      },
+      {
+       "word": "could",
+       "start": 862,
+       "end": 867
+      },
+      {
+       "word": "ship.",
+       "start": 869,
+       "end": 882
+      },
+      {
+       "word": "A",
+       "start": 898,
+       "end": 901
+      },
+      {
+       "word": "layer",
+       "start": 904,
+       "end": 914
+      },
+      {
+       "word": "that",
+       "start": 916,
+       "end": 922
+      },
+      {
+       "word": "steals",
+       "start": 924,
+       "end": 936
+      },
+      {
+       "word": "clicks.",
+       "start": 938,
+       "end": 956
+      },
+      {
+       "word": "A",
+       "start": 966,
+       "end": 968
+      },
+      {
+       "word": "link",
+       "start": 971,
+       "end": 978
+      },
+      {
+       "word": "hidden",
+       "start": 981,
+       "end": 990
+      },
+      {
+       "word": "on",
+       "start": 992,
+       "end": 995
+      },
+      {
+       "word": "small",
+       "start": 997,
+       "end": 1005
+      },
+      {
+       "word": "screens.",
+       "start": 1007,
+       "end": 1025
+      },
+      {
+       "word": "A",
+       "start": 1038,
+       "end": 1041
+      },
+      {
+       "word": "page",
+       "start": 1044,
+       "end": 1053
+      },
+      {
+       "word": "with",
+       "start": 1054,
+       "end": 1060
+      },
+      {
+       "word": "stale",
+       "start": 1060,
+       "end": 1072
+      },
+      {
+       "word": "numbers.",
+       "start": 1073,
+       "end": 1092
+      },
+      {
+       "word": "Unit",
+       "start": 1108,
+       "end": 1117
+      },
+      {
+       "word": "tests",
+       "start": 1118,
+       "end": 1132
+      },
+      {
+       "word": "caught",
+       "start": 1138,
+       "end": 1147
+      },
+      {
+       "word": "zero",
+       "start": 1149,
+       "end": 1160
+      },
+      {
+       "word": "of",
+       "start": 1162,
+       "end": 1164
+      },
+      {
+       "word": "five.",
+       "start": 1166,
+       "end": 1182
+      },
+      {
+       "word": "Kane",
+       "start": 1192,
+       "end": 1202
+      },
+      {
+       "word": "caught",
+       "start": 1205,
+       "end": 1214
+      },
+      {
+       "word": "all",
+       "start": 1216,
+       "end": 1223
+      },
+      {
+       "word": "five.",
+       "start": 1225,
+       "end": 1245
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "turn",
+   "from": 1253,
+   "durationInFrames": 240,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "This is Driftor. Done is a claim. Driftor makes the agent prove it.",
+     "file": "audio/vo/turn_0.mp3",
+     "startFrame": 1261,
+     "durationFrames": 154,
+     "words": [
+      {
+       "word": "This",
+       "start": 1261,
+       "end": 1267
+      },
+      {
+       "word": "is",
+       "start": 1269,
+       "end": 1272
+      },
+      {
+       "word": "Driftor.",
+       "start": 1274,
+       "end": 1291
+      },
+      {
+       "word": "Done",
+       "start": 1306,
+       "end": 1314
+      },
+      {
+       "word": "is",
+       "start": 1315,
+       "end": 1318
+      },
+      {
+       "word": "a",
+       "start": 1320,
+       "end": 1321
+      },
+      {
+       "word": "claim.",
+       "start": 1322,
+       "end": 1335
+      },
+      {
+       "word": "Driftor",
+       "start": 1353,
+       "end": 1366
+      },
+      {
+       "word": "makes",
+       "start": 1368,
+       "end": 1375
+      },
+      {
+       "word": "the",
+       "start": 1376,
+       "end": 1379
+      },
+      {
+       "word": "agent",
+       "start": 1381,
+       "end": 1391
+      },
+      {
+       "word": "prove",
+       "start": 1392,
+       "end": 1399
+      },
+      {
+       "word": "it.",
+       "start": 1400,
+       "end": 1415
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "kane",
+   "from": 1493,
+   "durationInFrames": 524,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Driftor runs on Kane CLI, from TestMu AI, formerly LambdaTest. Kane reads plain English, drives real Chrome, and seals every step into an evidence pack. Behind it, a platform with three million users and fifty thousand real devices.",
+     "file": "audio/vo/kane_0.mp3",
+     "startFrame": 1501,
+     "durationFrames": 509,
+     "words": [
+      {
+       "word": "Driftor",
+       "start": 1501,
+       "end": 1518
+      },
+      {
+       "word": "runs",
+       "start": 1525,
+       "end": 1534
+      },
+      {
+       "word": "on",
+       "start": 1536,
+       "end": 1539
+      },
+      {
+       "word": "Kane",
+       "start": 1542,
+       "end": 1551
+      },
+      {
+       "word": "CLI,",
+       "start": 1552,
+       "end": 1571
+      },
+      {
+       "word": "from",
+       "start": 1574,
+       "end": 1581
+      },
+      {
+       "word": "TestMu",
+       "start": 1583,
+       "end": 1596
+      },
+      {
+       "word": "AI,",
+       "start": 1598,
+       "end": 1612
+      },
+      {
+       "word": "formerly",
+       "start": 1621,
+       "end": 1633
+      },
+      {
+       "word": "LambdaTest.",
+       "start": 1635,
+       "end": 1658
+      },
+      {
+       "word": "Kane",
+       "start": 1668,
+       "end": 1677
+      },
+      {
+       "word": "reads",
+       "start": 1679,
+       "end": 1686
+      },
+      {
+       "word": "plain",
+       "start": 1688,
+       "end": 1695
+      },
+      {
+       "word": "English,",
+       "start": 1697,
+       "end": 1715
+      },
+      {
+       "word": "drives",
+       "start": 1725,
+       "end": 1736
+      },
+      {
+       "word": "real",
+       "start": 1738,
+       "end": 1744
+      },
+      {
+       "word": "Chrome,",
+       "start": 1747,
+       "end": 1759
+      },
+      {
+       "word": "and",
+       "start": 1766,
+       "end": 1771
+      },
+      {
+       "word": "seals",
+       "start": 1774,
+       "end": 1785
+      },
+      {
+       "word": "every",
+       "start": 1787,
+       "end": 1794
+      },
+      {
+       "word": "step",
+       "start": 1795,
+       "end": 1804
+      },
+      {
+       "word": "into",
+       "start": 1807,
+       "end": 1815
+      },
+      {
+       "word": "an",
+       "start": 1817,
+       "end": 1819
+      },
+      {
+       "word": "evidence",
+       "start": 1821,
+       "end": 1833
+      },
+      {
+       "word": "pack.",
+       "start": 1834,
+       "end": 1846
+      },
+      {
+       "word": "Behind",
+       "start": 1862,
+       "end": 1873
+      },
+      {
+       "word": "it,",
+       "start": 1876,
+       "end": 1883
+      },
+      {
+       "word": "a",
+       "start": 1886,
+       "end": 1888
+      },
+      {
+       "word": "platform",
+       "start": 1890,
+       "end": 1904
+      },
+      {
+       "word": "with",
+       "start": 1905,
+       "end": 1909
+      },
+      {
+       "word": "three",
+       "start": 1911,
+       "end": 1918
+      },
+      {
+       "word": "million",
+       "start": 1919,
+       "end": 1929
+      },
+      {
+       "word": "users",
+       "start": 1931,
+       "end": 1941
+      },
+      {
+       "word": "and",
+       "start": 1943,
+       "end": 1947
+      },
+      {
+       "word": "fifty",
+       "start": 1950,
+       "end": 1961
+      },
+      {
+       "word": "thousand",
+       "start": 1963,
+       "end": 1975
+      },
+      {
+       "word": "real",
+       "start": 1978,
+       "end": 1984
+      },
+      {
+       "word": "devices.",
+       "start": 1985,
+       "end": 2009
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hooks",
+   "from": 2017,
+   "durationInFrames": 450,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Driftor plugs into Claude Code as hooks. When the agent says done, Kane clicks through the user flows its change can touch, on wide and narrow screens. If one breaks, the agent goes back to fix it.",
+     "file": "audio/vo/hooks_0.mp3",
+     "startFrame": 2025,
+     "durationFrames": 430,
+     "words": [
+      {
+       "word": "Driftor",
+       "start": 2025,
+       "end": 2041
+      },
+      {
+       "word": "plugs",
+       "start": 2043,
+       "end": 2055
+      },
+      {
+       "word": "into",
+       "start": 2057,
+       "end": 2064
+      },
+      {
+       "word": "Claude",
+       "start": 2066,
+       "end": 2076
+      },
+      {
+       "word": "Code",
+       "start": 2077,
+       "end": 2087
+      },
+      {
+       "word": "as",
+       "start": 2088,
+       "end": 2092
+      },
+      {
+       "word": "hooks.",
+       "start": 2095,
+       "end": 2110
+      },
+      {
+       "word": "When",
+       "start": 2127,
+       "end": 2133
+      },
+      {
+       "word": "the",
+       "start": 2134,
+       "end": 2136
+      },
+      {
+       "word": "agent",
+       "start": 2138,
+       "end": 2147
+      },
+      {
+       "word": "says",
+       "start": 2149,
+       "end": 2156
+      },
+      {
+       "word": "done,",
+       "start": 2159,
+       "end": 2174
+      },
+      {
+       "word": "Kane",
+       "start": 2183,
+       "end": 2191
+      },
+      {
+       "word": "clicks",
+       "start": 2192,
+       "end": 2201
+      },
+      {
+       "word": "through",
+       "start": 2202,
+       "end": 2211
+      },
+      {
+       "word": "the",
+       "start": 2212,
+       "end": 2214
+      },
+      {
+       "word": "user",
+       "start": 2216,
+       "end": 2224
+      },
+      {
+       "word": "flows",
+       "start": 2226,
+       "end": 2237
+      },
+      {
+       "word": "its",
+       "start": 2240,
+       "end": 2245
+      },
+      {
+       "word": "change",
+       "start": 2247,
+       "end": 2257
+      },
+      {
+       "word": "can",
+       "start": 2258,
+       "end": 2264
+      },
+      {
+       "word": "touch,",
+       "start": 2266,
+       "end": 2280
+      },
+      {
+       "word": "on",
+       "start": 2291,
+       "end": 2295
+      },
+      {
+       "word": "wide",
+       "start": 2298,
+       "end": 2308
+      },
+      {
+       "word": "and",
+       "start": 2310,
+       "end": 2313
+      },
+      {
+       "word": "narrow",
+       "start": 2315,
+       "end": 2324
+      },
+      {
+       "word": "screens.",
+       "start": 2325,
+       "end": 2343
+      },
+      {
+       "word": "If",
+       "start": 2360,
+       "end": 2365
+      },
+      {
+       "word": "one",
+       "start": 2367,
+       "end": 2373
+      },
+      {
+       "word": "breaks,",
+       "start": 2374,
+       "end": 2390
+      },
+      {
+       "word": "the",
+       "start": 2395,
+       "end": 2399
+      },
+      {
+       "word": "agent",
+       "start": 2400,
+       "end": 2410
+      },
+      {
+       "word": "goes",
+       "start": 2412,
+       "end": 2419
+      },
+      {
+       "word": "back",
+       "start": 2421,
+       "end": 2426
+      },
+      {
+       "word": "to",
+       "start": 2428,
+       "end": 2430
+      },
+      {
+       "word": "fix",
+       "start": 2432,
+       "end": 2439
+      },
+      {
+       "word": "it.",
+       "start": 2441,
+       "end": 2455
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "red",
+   "from": 2467,
+   "durationInFrames": 489,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "It also writes the tests first. In a live session, we asked Claude for a Revoke button. Before a line of code, Kane designed two tests from that request, and ran them.",
+     "file": "audio/vo/red_0.mp3",
+     "startFrame": 2475,
+     "durationFrames": 348,
+     "words": [
+      {
+       "word": "It",
+       "start": 2475,
+       "end": 2480
+      },
+      {
+       "word": "also",
+       "start": 2482,
+       "end": 2492
+      },
+      {
+       "word": "writes",
+       "start": 2494,
+       "end": 2501
+      },
+      {
+       "word": "the",
+       "start": 2502,
+       "end": 2504
+      },
+      {
+       "word": "tests",
+       "start": 2506,
+       "end": 2515
+      },
+      {
+       "word": "first.",
+       "start": 2517,
+       "end": 2533
+      },
+      {
+       "word": "In",
+       "start": 2546,
+       "end": 2551
+      },
+      {
+       "word": "a",
+       "start": 2553,
+       "end": 2554
+      },
+      {
+       "word": "live",
+       "start": 2556,
+       "end": 2563
+      },
+      {
+       "word": "session,",
+       "start": 2564,
+       "end": 2581
+      },
+      {
+       "word": "we",
+       "start": 2586,
+       "end": 2590
+      },
+      {
+       "word": "asked",
+       "start": 2592,
+       "end": 2601
+      },
+      {
+       "word": "Claude",
+       "start": 2603,
+       "end": 2617
+      },
+      {
+       "word": "for",
+       "start": 2620,
+       "end": 2627
+      },
+      {
+       "word": "a",
+       "start": 2629,
+       "end": 2630
+      },
+      {
+       "word": "Revoke",
+       "start": 2632,
+       "end": 2643
+      },
+      {
+       "word": "button.",
+       "start": 2644,
+       "end": 2659
+      },
+      {
+       "word": "Before",
+       "start": 2669,
+       "end": 2681
+      },
+      {
+       "word": "a",
+       "start": 2683,
+       "end": 2685
+      },
+      {
+       "word": "line",
+       "start": 2687,
+       "end": 2694
+      },
+      {
+       "word": "of",
+       "start": 2695,
+       "end": 2697
+      },
+      {
+       "word": "code,",
+       "start": 2700,
+       "end": 2712
+      },
+      {
+       "word": "Kane",
+       "start": 2721,
+       "end": 2728
+      },
+      {
+       "word": "designed",
+       "start": 2729,
+       "end": 2741
+      },
+      {
+       "word": "two",
+       "start": 2742,
+       "end": 2746
+      },
+      {
+       "word": "tests",
+       "start": 2748,
+       "end": 2757
+      },
+      {
+       "word": "from",
+       "start": 2758,
+       "end": 2763
+      },
+      {
+       "word": "that",
+       "start": 2765,
+       "end": 2769
+      },
+      {
+       "word": "request,",
+       "start": 2771,
+       "end": 2788
+      },
+      {
+       "word": "and",
+       "start": 2792,
+       "end": 2798
+      },
+      {
+       "word": "ran",
+       "start": 2800,
+       "end": 2805
+      },
+      {
+       "word": "them.",
+       "start": 2807,
+       "end": 2823
+      }
+     ]
+    },
+    {
+     "voice": "kane",
+     "text": "Checkpoint assertion failed. KEY-001 has a Revoke button.",
+     "file": "audio/vo/red_1.mp3",
+     "startFrame": 2831,
+     "durationFrames": 118,
+     "words": [
+      {
+       "word": "Checkpoint",
+       "start": 2831,
+       "end": 2845
+      },
+      {
+       "word": "assertion",
+       "start": 2846,
+       "end": 2858
+      },
+      {
+       "word": "failed.",
+       "start": 2860,
+       "end": 2872
+      },
+      {
+       "word": "Key",
+       "start": 2880,
+       "end": 2886
+      },
+      {
+       "word": "zero",
+       "start": 2887,
+       "end": 2895
+      },
+      {
+       "word": "zero",
+       "start": 2896,
+       "end": 2903
+      },
+      {
+       "word": "one",
+       "start": 2906,
+       "end": 2911
+      },
+      {
+       "word": "has",
+       "start": 2913,
+       "end": 2917
+      },
+      {
+       "word": "a",
+       "start": 2918,
+       "end": 2919
+      },
+      {
+       "word": "Revoke",
+       "start": 2921,
+       "end": 2930
+      },
+      {
+       "word": "button.",
+       "start": 2930,
+       "end": 2948
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "green",
+   "from": 2956,
+   "durationInFrames": 390,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Red, as it should be. Claude built the feature. Kane ran the same two tests again. Both passed. Red to green, with a receipt to prove it.",
+     "file": "audio/vo/green_0.mp3",
+     "startFrame": 2964,
+     "durationFrames": 331,
+     "words": [
+      {
+       "word": "Red,",
+       "start": 2964,
+       "end": 2980
+      },
+      {
+       "word": "as",
+       "start": 2987,
+       "end": 2993
+      },
+      {
+       "word": "it",
+       "start": 2995,
+       "end": 2997
+      },
+      {
+       "word": "should",
+       "start": 2998,
+       "end": 3004
+      },
+      {
+       "word": "be.",
+       "start": 3005,
+       "end": 3014
+      },
+      {
+       "word": "Claude",
+       "start": 3031,
+       "end": 3046
+      },
+      {
+       "word": "built",
+       "start": 3049,
+       "end": 3057
+      },
+      {
+       "word": "the",
+       "start": 3057,
+       "end": 3060
+      },
+      {
+       "word": "feature.",
+       "start": 3062,
+       "end": 3078
+      },
+      {
+       "word": "Kane",
+       "start": 3092,
+       "end": 3099
+      },
+      {
+       "word": "ran",
+       "start": 3100,
+       "end": 3105
+      },
+      {
+       "word": "the",
+       "start": 3107,
+       "end": 3109
+      },
+      {
+       "word": "same",
+       "start": 3110,
+       "end": 3116
+      },
+      {
+       "word": "two",
+       "start": 3117,
+       "end": 3120
+      },
+      {
+       "word": "tests",
+       "start": 3122,
+       "end": 3131
+      },
+      {
+       "word": "again.",
+       "start": 3133,
+       "end": 3147
+      },
+      {
+       "word": "Both",
+       "start": 3160,
+       "end": 3168
+      },
+      {
+       "word": "passed.",
+       "start": 3171,
+       "end": 3186
+      },
+      {
+       "word": "Red",
+       "start": 3202,
+       "end": 3211
+      },
+      {
+       "word": "to",
+       "start": 3213,
+       "end": 3216
+      },
+      {
+       "word": "green,",
+       "start": 3218,
+       "end": 3233
+      },
+      {
+       "word": "with",
+       "start": 3245,
+       "end": 3251
+      },
+      {
+       "word": "a",
+       "start": 3252,
+       "end": 3253
+      },
+      {
+       "word": "receipt",
+       "start": 3255,
+       "end": 3266
+      },
+      {
+       "word": "to",
+       "start": 3268,
+       "end": 3270
+      },
+      {
+       "word": "prove",
+       "start": 3272,
+       "end": 3279
+      },
+      {
+       "word": "it.",
+       "start": 3280,
+       "end": 3294
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "guard",
+   "from": 3346,
+   "durationInFrames": 429,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "But a stuck agent might cheat, and weaken the test instead of fixing the app. Driftor's guard watches every protected file. In our replay, it blocked four cheats, and let the real fix through.",
+     "file": "audio/vo/guard_0.mp3",
+     "startFrame": 3354,
+     "durationFrames": 413,
+     "words": [
+      {
+       "word": "But",
+       "start": 3354,
+       "end": 3362
+      },
+      {
+       "word": "a",
+       "start": 3364,
+       "end": 3367
+      },
+      {
+       "word": "stuck",
+       "start": 3369,
+       "end": 3378
+      },
+      {
+       "word": "agent",
+       "start": 3381,
+       "end": 3392
+      },
+      {
+       "word": "might",
+       "start": 3394,
+       "end": 3401
+      },
+      {
+       "word": "cheat,",
+       "start": 3403,
+       "end": 3419
+      },
+      {
+       "word": "and",
+       "start": 3427,
+       "end": 3432
+      },
+      {
+       "word": "weaken",
+       "start": 3435,
+       "end": 3446
+      },
+      {
+       "word": "the",
+       "start": 3447,
+       "end": 3450
+      },
+      {
+       "word": "test",
+       "start": 3452,
+       "end": 3459
+      },
+      {
+       "word": "instead",
+       "start": 3461,
+       "end": 3472
+      },
+      {
+       "word": "of",
+       "start": 3474,
+       "end": 3476
+      },
+      {
+       "word": "fixing",
+       "start": 3479,
+       "end": 3489
+      },
+      {
+       "word": "the",
+       "start": 3491,
+       "end": 3493
+      },
+      {
+       "word": "app.",
+       "start": 3495,
+       "end": 3507
+      },
+      {
+       "word": "Driftor's",
+       "start": 3523,
+       "end": 3539
+      },
+      {
+       "word": "guard",
+       "start": 3542,
+       "end": 3552
+      },
+      {
+       "word": "watches",
+       "start": 3554,
+       "end": 3569
+      },
+      {
+       "word": "every",
+       "start": 3574,
+       "end": 3584
+      },
+      {
+       "word": "protected",
+       "start": 3586,
+       "end": 3603
+      },
+      {
+       "word": "file.",
+       "start": 3605,
+       "end": 3620
+      },
+      {
+       "word": "In",
+       "start": 3630,
+       "end": 3634
+      },
+      {
+       "word": "our",
+       "start": 3637,
+       "end": 3643
+      },
+      {
+       "word": "replay,",
+       "start": 3645,
+       "end": 3660
+      },
+      {
+       "word": "it",
+       "start": 3667,
+       "end": 3672
+      },
+      {
+       "word": "blocked",
+       "start": 3674,
+       "end": 3683
+      },
+      {
+       "word": "four",
+       "start": 3685,
+       "end": 3693
+      },
+      {
+       "word": "cheats,",
+       "start": 3695,
+       "end": 3710
+      },
+      {
+       "word": "and",
+       "start": 3715,
+       "end": 3720
+      },
+      {
+       "word": "let",
+       "start": 3722,
+       "end": 3728
+      },
+      {
+       "word": "the",
+       "start": 3729,
+       "end": 3730
+      },
+      {
+       "word": "real",
+       "start": 3732,
+       "end": 3738
+      },
+      {
+       "word": "fix",
+       "start": 3740,
+       "end": 3746
+      },
+      {
+       "word": "through.",
+       "start": 3748,
+       "end": 3767
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "saw",
+   "from": 3775,
+   "durationInFrames": 356,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "When a check fails, nobody digs through logs. Driftor turns Kane's evidence into one card. What the user saw, the step, and why.",
+     "file": "audio/vo/saw_0.mp3",
+     "startFrame": 3783,
+     "durationFrames": 292,
+     "words": [
+      {
+       "word": "When",
+       "start": 3783,
+       "end": 3789
+      },
+      {
+       "word": "a",
+       "start": 3791,
+       "end": 3792
+      },
+      {
+       "word": "check",
+       "start": 3793,
+       "end": 3798
+      },
+      {
+       "word": "fails,",
+       "start": 3801,
+       "end": 3816
+      },
+      {
+       "word": "nobody",
+       "start": 3822,
+       "end": 3833
+      },
+      {
+       "word": "digs",
+       "start": 3835,
+       "end": 3841
+      },
+      {
+       "word": "through",
+       "start": 3843,
+       "end": 3849
+      },
+      {
+       "word": "logs.",
+       "start": 3851,
+       "end": 3866
+      },
+      {
+       "word": "Driftor",
+       "start": 3878,
+       "end": 3892
+      },
+      {
+       "word": "turns",
+       "start": 3894,
+       "end": 3902
+      },
+      {
+       "word": "Kane's",
+       "start": 3904,
+       "end": 3913
+      },
+      {
+       "word": "evidence",
+       "start": 3915,
+       "end": 3930
+      },
+      {
+       "word": "into",
+       "start": 3932,
+       "end": 3939
+      },
+      {
+       "word": "one",
+       "start": 3942,
+       "end": 3947
+      },
+      {
+       "word": "card.",
+       "start": 3949,
+       "end": 3963
+      },
+      {
+       "word": "What",
+       "start": 3979,
+       "end": 3987
+      },
+      {
+       "word": "the",
+       "start": 3988,
+       "end": 3990
+      },
+      {
+       "word": "user",
+       "start": 3993,
+       "end": 4002
+      },
+      {
+       "word": "saw,",
+       "start": 4004,
+       "end": 4022
+      },
+      {
+       "word": "the",
+       "start": 4028,
+       "end": 4032
+      },
+      {
+       "word": "step,",
+       "start": 4033,
+       "end": 4047
+      },
+      {
+       "word": "and",
+       "start": 4048,
+       "end": 4053
+      },
+      {
+       "word": "why.",
+       "start": 4056,
+       "end": 4075
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tour",
+   "from": 4131,
+   "durationInFrames": 362,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Every run is archived. The site shows each bug in the zoo, every verdict, and the card behind it. And one command runs the whole demo, no account needed.",
+     "file": "audio/vo/tour_0.mp3",
+     "startFrame": 4139,
+     "durationFrames": 310,
+     "words": [
+      {
+       "word": "Every",
+       "start": 4139,
+       "end": 4148
+      },
+      {
+       "word": "run",
+       "start": 4150,
+       "end": 4156
+      },
+      {
+       "word": "is",
+       "start": 4158,
+       "end": 4162
+      },
+      {
+       "word": "archived.",
+       "start": 4165,
+       "end": 4183
+      },
+      {
+       "word": "The",
+       "start": 4195,
+       "end": 4199
+      },
+      {
+       "word": "site",
+       "start": 4201,
+       "end": 4210
+      },
+      {
+       "word": "shows",
+       "start": 4212,
+       "end": 4221
+      },
+      {
+       "word": "each",
+       "start": 4223,
+       "end": 4228
+      },
+      {
+       "word": "bug",
+       "start": 4230,
+       "end": 4236
+      },
+      {
+       "word": "in",
+       "start": 4239,
+       "end": 4241
+      },
+      {
+       "word": "the",
+       "start": 4241,
+       "end": 4244
+      },
+      {
+       "word": "zoo,",
+       "start": 4246,
+       "end": 4256
+      },
+      {
+       "word": "every",
+       "start": 4268,
+       "end": 4275
+      },
+      {
+       "word": "verdict,",
+       "start": 4277,
+       "end": 4294
+      },
+      {
+       "word": "and",
+       "start": 4306,
+       "end": 4310
+      },
+      {
+       "word": "the",
+       "start": 4311,
+       "end": 4313
+      },
+      {
+       "word": "card",
+       "start": 4315,
+       "end": 4321
+      },
+      {
+       "word": "behind",
+       "start": 4323,
+       "end": 4333
+      },
+      {
+       "word": "it.",
+       "start": 4335,
+       "end": 4343
+      },
+      {
+       "word": "And",
+       "start": 4354,
+       "end": 4358
+      },
+      {
+       "word": "one",
+       "start": 4359,
+       "end": 4365
+      },
+      {
+       "word": "command",
+       "start": 4366,
+       "end": 4376
+      },
+      {
+       "word": "runs",
+       "start": 4378,
+       "end": 4386
+      },
+      {
+       "word": "the",
+       "start": 4387,
+       "end": 4389
+      },
+      {
+       "word": "whole",
+       "start": 4390,
+       "end": 4396
+      },
+      {
+       "word": "demo,",
+       "start": 4397,
+       "end": 4410
+      },
+      {
+       "word": "no",
+       "start": 4415,
+       "end": 4421
+      },
+      {
+       "word": "account",
+       "start": 4423,
+       "end": 4433
+      },
+      {
+       "word": "needed.",
+       "start": 4435,
+       "end": 4448
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "unique",
+   "from": 4493,
+   "durationInFrames": 426,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "A transcript tells you what an agent did. Driftor decides whether it gets to stop. Tests from the task. Red before green. A guard on the tests. And real Chrome as the judge.",
+     "file": "audio/vo/unique_0.mp3",
+     "startFrame": 4501,
+     "durationFrames": 411,
+     "words": [
+      {
+       "word": "A",
+       "start": 4501,
+       "end": 4504
+      },
+      {
+       "word": "transcript",
+       "start": 4506,
+       "end": 4523
+      },
+      {
+       "word": "tells",
+       "start": 4523,
+       "end": 4532
+      },
+      {
+       "word": "you",
+       "start": 4534,
+       "end": 4536
+      },
+      {
+       "word": "what",
+       "start": 4539,
+       "end": 4544
+      },
+      {
+       "word": "an",
+       "start": 4546,
+       "end": 4549
+      },
+      {
+       "word": "agent",
+       "start": 4552,
+       "end": 4562
+      },
+      {
+       "word": "did.",
+       "start": 4564,
+       "end": 4576
+      },
+      {
+       "word": "Driftor",
+       "start": 4593,
+       "end": 4606
+      },
+      {
+       "word": "decides",
+       "start": 4608,
+       "end": 4622
+      },
+      {
+       "word": "whether",
+       "start": 4625,
+       "end": 4634
+      },
+      {
+       "word": "it",
+       "start": 4636,
+       "end": 4640
+      },
+      {
+       "word": "gets",
+       "start": 4642,
+       "end": 4649
+      },
+      {
+       "word": "to",
+       "start": 4650,
+       "end": 4653
+      },
+      {
+       "word": "stop.",
+       "start": 4654,
+       "end": 4669
+      },
+      {
+       "word": "Tests",
+       "start": 4685,
+       "end": 4696
+      },
+      {
+       "word": "from",
+       "start": 4698,
+       "end": 4702
+      },
+      {
+       "word": "the",
+       "start": 4704,
+       "end": 4706
+      },
+      {
+       "word": "task.",
+       "start": 4708,
+       "end": 4724
+      },
+      {
+       "word": "Red",
+       "start": 4743,
+       "end": 4751
+      },
+      {
+       "word": "before",
+       "start": 4752,
+       "end": 4763
+      },
+      {
+       "word": "green.",
+       "start": 4764,
+       "end": 4779
+      },
+      {
+       "word": "A",
+       "start": 4796,
+       "end": 4799
+      },
+      {
+       "word": "guard",
+       "start": 4802,
+       "end": 4810
+      },
+      {
+       "word": "on",
+       "start": 4812,
+       "end": 4816
+      },
+      {
+       "word": "the",
+       "start": 4817,
+       "end": 4819
+      },
+      {
+       "word": "tests.",
+       "start": 4821,
+       "end": 4840
+      },
+      {
+       "word": "And",
+       "start": 4854,
+       "end": 4859
+      },
+      {
+       "word": "real",
+       "start": 4861,
+       "end": 4868
+      },
+      {
+       "word": "Chrome",
+       "start": 4870,
+       "end": 4880
+      },
+      {
+       "word": "as",
+       "start": 4881,
+       "end": 4886
+      },
+      {
+       "word": "the",
+       "start": 4888,
+       "end": 4890
+      },
+      {
+       "word": "judge.",
+       "start": 4892,
+       "end": 4911
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "close",
+   "from": 4919,
+   "durationInFrames": 391,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Driftor. Done is a claim. Prove it. Built with Claude Code and Kane CLI, for the Kane CLI hackathon.",
+     "file": "audio/vo/close_0.mp3",
+     "startFrame": 4927,
+     "durationFrames": 254,
+     "words": [
+      {
+       "word": "Driftor.",
+       "start": 4927,
+       "end": 4948
+      },
+      {
+       "word": "Done",
+       "start": 4963,
+       "end": 4971
+      },
+      {
+       "word": "is",
+       "start": 4973,
+       "end": 4976
+      },
+      {
+       "word": "a",
+       "start": 4978,
+       "end": 4979
+      },
+      {
+       "word": "claim.",
+       "start": 4981,
+       "end": 4995
+      },
+      {
+       "word": "Prove",
+       "start": 5012,
+       "end": 5021
+      },
+      {
+       "word": "it.",
+       "start": 5022,
+       "end": 5033
+      },
+      {
+       "word": "Built",
+       "start": 5050,
+       "end": 5059
+      },
+      {
+       "word": "with",
+       "start": 5061,
+       "end": 5065
+      },
+      {
+       "word": "Claude",
+       "start": 5066,
+       "end": 5075
+      },
+      {
+       "word": "Code",
+       "start": 5076,
+       "end": 5087
+      },
+      {
+       "word": "and",
+       "start": 5088,
+       "end": 5094
+      },
+      {
+       "word": "Kane",
+       "start": 5097,
+       "end": 5106
+      },
+      {
+       "word": "CLI,",
+       "start": 5107,
+       "end": 5125
+      },
+      {
+       "word": "for",
+       "start": 5126,
+       "end": 5130
+      },
+      {
+       "word": "the",
+       "start": 5131,
+       "end": 5133
+      },
+      {
+       "word": "Kane",
+       "start": 5135,
+       "end": 5142
+      },
+      {
+       "word": "CLI",
+       "start": 5143,
+       "end": 5153
+      },
+      {
+       "word": "hackathon.",
+       "start": 5155,
+       "end": 5180
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
