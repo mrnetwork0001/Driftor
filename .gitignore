@@ -23,3 +23,6 @@ video/out/
 video/.cache/
 video/public/footage/
 video/public/stills/
+
+# local agent worktrees and scratch logs
+.claude/worktrees/
