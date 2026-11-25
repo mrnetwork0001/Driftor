@@ -2,7 +2,7 @@
 
 **Repository:** https://github.com/mrnetwork0001/Driftor
 **Demo video (≤ 3 min, unlisted):** _add link_
-**Live URL:** _add Vercel link_. Locally: `npm install && npm run dev`, then open http://localhost:3000
+**Live URL:** https://trydriftor.vercel.app (the landing, the CloudScale demo app at /app and the traces at /hud). Locally: `npm install && npm run dev`, then open http://localhost:3000
 **Agent:** Claude Code (Stop hook). `driftor:heal` falls back to Gemini CLI.
 
 ## The paragraph

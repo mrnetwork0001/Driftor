@@ -17,3 +17,9 @@ kane-traces/runs/*/evidence/
 # Which objectives the last gate selected (runtime state).
 kane-traces/selection.json
 *.tsbuildinfo
+# The demo film: sources are committed, renders and caches are not.
+video/node_modules/
+video/out/
+video/.cache/
+video/public/footage/
+video/public/stills/

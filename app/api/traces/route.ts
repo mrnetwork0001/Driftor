@@ -115,9 +115,12 @@ function readDir(dir: string) {
       const events = parseNdjson(text);
       const failed = events.some(isFailure);
       const ended = events.some((e: Record<string, unknown>) => e.type === "run_end");
+      // The newest timestamp Kane wrote in the trace. Serverless deploys reset file mtimes
+      // (Vercel stamps every file 2018-10-20), so the mtime is only a fallback.
+      const stamps = events.map((e: Record<string, unknown>) => e.ts).filter((t): t is string => typeof t === "string" && !Number.isNaN(Date.parse(t)));
       files.push({
         name,
-        modified: fs.statSync(full).mtime.toISOString(),
+        modified: stamps.length ? new Date(Math.max(...stamps.map((t) => Date.parse(t)))).toISOString() : fs.statSync(full).mtime.toISOString(),
         status: failed ? "failed" : ended ? "passed" : "unknown",
         events: parseForDisplay(text),
       });
